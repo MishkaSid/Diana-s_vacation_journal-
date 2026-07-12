@@ -10,8 +10,7 @@ function GalleryItem({
   photo: VacationPhoto;
   onOpen: () => void;
 }) {
-  const blob = photo.thumbnailBlob ?? photo.imageBlob;
-  const url = useObjectUrl(blob);
+  const url = useObjectUrl(photo.imageBlob);
 
   return (
     <button
