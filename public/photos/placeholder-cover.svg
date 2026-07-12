@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Travel destination placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#efe6d8"/>
+      <stop offset="100%" stop-color="#d8c4ae"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <circle cx="420" cy="320" r="120" fill="#c46a4a" opacity="0.18"/>
+  <circle cx="1180" cy="260" r="160" fill="#6f7a55" opacity="0.16"/>
+  <path d="M180 720 C420 560 620 780 860 620 C1080 480 1280 700 1420 580" fill="none" stroke="#a85336" stroke-width="18" stroke-linecap="round" opacity="0.35"/>
+  <text x="800" y="520" text-anchor="middle" fill="#6b5f55" font-family="Georgia, serif" font-size="48" opacity="0.7">Awaiting memories</text>
+</svg>

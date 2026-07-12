@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Italy travel placeholder">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d9e4ef"/>
+      <stop offset="45%" stop-color="#f3e7d5"/>
+      <stop offset="100%" stop-color="#e8c8b0"/>
+    </linearGradient>
+    <linearGradient id="hills" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a9470"/>
+      <stop offset="100%" stop-color="#6f7a55"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <circle cx="1180" cy="220" r="70" fill="#f4d9b0" opacity="0.85"/>
+  <path d="M0 620 C220 520 380 700 560 610 C760 510 900 680 1120 600 C1300 540 1460 620 1600 560 L1600 1000 L0 1000 Z" fill="url(#hills)" opacity="0.9"/>
+  <path d="M0 740 C260 680 420 820 680 740 C940 660 1120 820 1380 760 C1480 735 1550 760 1600 740 L1600 1000 L0 1000 Z" fill="#c46a4a" opacity="0.35"/>
+  <rect x="690" y="430" width="90" height="210" rx="8" fill="#f7f1e8" opacity="0.92"/>
+  <polygon points="690,430 735,340 780,430" fill="#c46a4a" opacity="0.9"/>
+  <rect x="820" y="480" width="70" height="160" rx="6" fill="#efe6d8" opacity="0.9"/>
+  <polygon points="820,480 855,410 890,480" fill="#a85336" opacity="0.85"/>
+  <text x="800" y="900" text-anchor="middle" fill="#3a322c" font-family="Georgia, serif" font-size="54" opacity="0.55">Italy</text>
+</svg>

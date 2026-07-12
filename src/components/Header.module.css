@@ -1,0 +1,12 @@
+.logoutWrap {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+}
+
+.logout {
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 252, 248, 0.9);
+}

@@ -1,0 +1,42 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(40, 32, 28, 0.45);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 200ms ease;
+}
+
+.dialog {
+  width: min(560px, 100%);
+  max-height: min(90vh, 860px);
+  overflow: auto;
+  background: rgba(255, 252, 248, 0.94);
+  border: 1px solid rgba(58, 50, 44, 0.08);
+  border-radius: 22px;
+  box-shadow: var(--shadow-strong);
+  padding: 1.4rem 1.4rem 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.header h2 {
+  font-size: 1.8rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
