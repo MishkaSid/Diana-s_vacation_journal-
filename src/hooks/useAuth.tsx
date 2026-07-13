@@ -1,32 +1,60 @@
-import { useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AuthContext } from './authContext';
 import {
-  isAuthenticated as readAuthFlag,
-  logout as clearAuth,
-  setAuthenticated,
-} from '../services/auth';
-import { validateCredentials } from '../services/db';
+  fetchSession,
+  loginRequest,
+  logoutRequest,
+} from '../services/journal';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authenticated, setAuthState] = useState(() => readAuthFlag());
+  const [authenticated, setAuthenticated] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const ok = await validateCredentials(username, password);
-    if (ok) {
-      setAuthenticated(true);
-      setAuthState(true);
+  const refreshSession = useCallback(async () => {
+    setChecking(true);
+    try {
+      const ok = await fetchSession();
+      setAuthenticated(ok);
+    } catch {
+      setAuthenticated(false);
+    } finally {
+      setChecking(false);
     }
-    return ok;
   }, []);
 
-  const logout = useCallback(() => {
-    clearAuth();
-    setAuthState(false);
+  useEffect(() => {
+    void refreshSession();
+  }, [refreshSession]);
+
+  const login = useCallback(async (username: string, password: string) => {
+    await loginRequest(username, password);
+    setAuthenticated(true);
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutRequest();
+    } finally {
+      setAuthenticated(false);
+    }
   }, []);
 
   const value = useMemo(
-    () => ({ authenticated, login, logout }),
-    [authenticated, login, logout],
+    () => ({
+      authenticated,
+      checking,
+      login,
+      logout,
+      refreshSession,
+    }),
+    [authenticated, checking, login, logout, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

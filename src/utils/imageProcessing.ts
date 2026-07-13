@@ -67,7 +67,6 @@ function drawResized(
   const scale = longest > maxDimension ? maxDimension / longest : 1;
   const targetW = Math.max(1, Math.round(width * scale));
   const targetH = Math.max(1, Math.round(height * scale));
-
   const canvas = document.createElement('canvas');
   canvas.width = targetW;
   canvas.height = targetH;
@@ -83,7 +82,6 @@ export interface ProcessedImage {
   fileName: string;
 }
 
-/** Resize large images in the browser before uploading to Supabase Storage. */
 export async function processImageFile(file: File): Promise<ProcessedImage> {
   const img = await loadImageFromFile(file);
   const outputType =
@@ -91,25 +89,7 @@ export async function processImageFile(file: File): Promise<ProcessedImage> {
       ? file.type
       : 'image/jpeg';
   const quality = outputType === 'image/png' ? 0.92 : 0.85;
-  const mainCanvas = drawResized(img, MAX_IMAGE_DIMENSION);
-  const imageBlob = await canvasToBlob(mainCanvas, outputType, quality);
-
-  return {
-    imageBlob,
-    mimeType: outputType,
-    fileName: file.name,
-  };
-}
-
-export function downloadBlob(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
-export function safeStorageFileName(fileName: string): string {
-  return fileName.replace(/[^\w.\-]+/g, '_').slice(0, 120);
+  const canvas = drawResized(img, MAX_IMAGE_DIMENSION);
+  const imageBlob = await canvasToBlob(canvas, outputType, quality);
+  return { imageBlob, mimeType: outputType, fileName: file.name };
 }

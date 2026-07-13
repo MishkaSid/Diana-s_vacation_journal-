@@ -1,11 +1,11 @@
-import type { VacationPhoto } from '../types';
+import type { Photo } from '../types';
 import styles from './PhotoGallery.module.css';
 
 function GalleryItem({
   photo,
   onOpen,
 }: {
-  photo: VacationPhoto;
+  photo: Photo;
   onOpen: () => void;
 }) {
   return (
@@ -15,18 +15,22 @@ function GalleryItem({
       onClick={onOpen}
       aria-label={photo.caption || `Open photo ${photo.id}`}
     >
-      <img
-        src={photo.imageUrl}
-        alt={photo.caption || `Photo ${photo.id}`}
-        loading="lazy"
-      />
+      {photo.signed_url ? (
+        <img
+          src={photo.signed_url}
+          alt={photo.caption || `Photo ${photo.id}`}
+          loading="lazy"
+        />
+      ) : (
+        <div style={{ aspectRatio: '4/3', background: 'var(--beige)' }} />
+      )}
       {photo.caption ? <div className={styles.caption}>{photo.caption}</div> : null}
     </button>
   );
 }
 
 interface PhotoGalleryProps {
-  photos: VacationPhoto[];
+  photos: Photo[];
   onOpen: (index: number) => void;
 }
 

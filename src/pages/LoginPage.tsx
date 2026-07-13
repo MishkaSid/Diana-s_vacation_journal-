@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
-  const { authenticated, login } = useAuth();
+  const { authenticated, checking, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
@@ -25,6 +25,15 @@ export function LoginPage() {
     return () => window.clearTimeout(timer);
   }, [shake]);
 
+  if (checking) {
+    return (
+      <div className="loadingState" style={{ minHeight: '100vh' }}>
+        <div className="loadingSpinner" aria-hidden="true" />
+        Checking session…
+      </div>
+    );
+  }
+
   if (authenticated) {
     return <Navigate to={from} replace />;
   }
@@ -34,16 +43,11 @@ export function LoginPage() {
     setSubmitting(true);
     setError('');
     try {
-      const ok = await login(username, password);
-      if (ok) {
-        navigate(from, { replace: true });
-        return;
-      }
-      setError('Incorrect username or password');
-      setShake(true);
+      await login(username, password);
+      navigate(from, { replace: true });
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to sign in right now.',
+        err instanceof Error ? err.message : 'Invalid username or password',
       );
       setShake(true);
     } finally {

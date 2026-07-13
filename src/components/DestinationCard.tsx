@@ -1,32 +1,19 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PLACEHOLDER_COVER } from '../data/initialData';
-import { getCoverUrlForDestination } from '../services/db';
 import type { Destination } from '../types';
 import styles from './DestinationCard.module.css';
 
 interface DestinationCardProps {
   destination: Destination;
   photoCount: number;
+  coverUrl?: string | null;
 }
 
-export function DestinationCard({ destination, photoCount }: DestinationCardProps) {
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getCoverUrlForDestination(destination.id)
-      .then((url) => {
-        if (!cancelled) setCoverUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setCoverUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [destination.id, photoCount]);
-
+export function DestinationCard({
+  destination,
+  photoCount,
+  coverUrl,
+}: DestinationCardProps) {
   const countLabel = photoCount === 1 ? '1 photo' : `${photoCount} photos`;
 
   return (

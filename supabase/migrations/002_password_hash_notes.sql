@@ -1,0 +1,12 @@
+-- Password hashing is performed by scripts/hash-password.mjs
+-- (bcrypt). This file documents the expected app_settings shape.
+--
+-- After hashing, the password column stores a bcrypt hash such as:
+--   $2a$12$...
+--
+-- Never store or log plaintext passwords.
+
+-- Optional: ensure the singleton settings row exists (replace values first).
+-- INSERT INTO public.app_settings (id, username, password)
+-- VALUES (1, 'diana', 'REPLACE_WITH_BCRYPT_HASH')
+-- ON CONFLICT (id) DO NOTHING;

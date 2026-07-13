@@ -6,21 +6,29 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 
 export default function App() {
-  const { authenticated, logout } = useAuth();
+  const { authenticated, checking, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+    void logout().then(() => {
+      navigate('/login', { replace: true });
+    });
   };
+
+  if (checking) {
+    return (
+      <div className="loadingState" style={{ minHeight: '100vh' }}>
+        <div className="loadingSpinner" aria-hidden="true" />
+        Checking session…
+      </div>
+    );
+  }
 
   return (
     <Routes>
       <Route
         path="/login"
-        element={
-          authenticated ? <Navigate to="/" replace /> : <LoginPage />
-        }
+        element={authenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage onLogout={handleLogout} />} />

@@ -3,30 +3,15 @@ import type { Destination, DestinationInput } from '../types';
 import {
   createDestination,
   deleteDestination,
-  getAllDestinations,
-  getDestinationById,
-  getPhotoCountMap,
-  seedInitialData,
+  listDestinations,
+  listPhotos,
   updateDestination,
-} from '../services/db';
+} from '../services/journal';
 
-interface UseDestinationsResult {
-  destinations: Destination[];
-  photoCounts: Record<number, number>;
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-  addDestination: (input: DestinationInput) => Promise<Destination>;
-  editDestination: (
-    id: number,
-    input: DestinationInput,
-  ) => Promise<Destination>;
-  removeDestination: (id: number) => Promise<void>;
-}
-
-export function useDestinations(): UseDestinationsResult {
+export function useDestinations() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [photoCounts, setPhotoCounts] = useState<Record<number, number>>({});
+  const [coverUrls, setCoverUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,13 +19,29 @@ export function useDestinations(): UseDestinationsResult {
     setLoading(true);
     setError(null);
     try {
-      await seedInitialData();
-      const [list, counts] = await Promise.all([
-        getAllDestinations(),
-        getPhotoCountMap(),
-      ]);
+      const list = await listDestinations();
       setDestinations(list);
+
+      const counts: Record<number, number> = {};
+      const covers: Record<number, string> = {};
+      await Promise.all(
+        list.map(async (destination) => {
+          const photos = await listPhotos(destination.id);
+          counts[destination.id] = photos.length;
+          if (photos.length > 0) {
+            const earliest = [...photos].sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime(),
+            )[0];
+            if (earliest?.signed_url) {
+              covers[destination.id] = earliest.signed_url;
+            }
+          }
+        }),
+      );
       setPhotoCounts(counts);
+      setCoverUrls(covers);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load destinations.',
@@ -83,6 +84,7 @@ export function useDestinations(): UseDestinationsResult {
   return {
     destinations,
     photoCounts,
+    coverUrls,
     loading,
     error,
     refresh,
@@ -109,8 +111,9 @@ export function useDestination(idParam: string | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const found = await getDestinationById(id);
-      setDestination(found ?? null);
+      const list = await listDestinations();
+      const found = list.find((item) => item.id === id) ?? null;
+      setDestination(found);
       if (!found) setError('Destination not found.');
     } catch (err) {
       setError(

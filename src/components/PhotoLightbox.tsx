@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { VacationPhoto } from '../types';
+import type { Photo } from '../types';
 import { formatDisplayDate } from '../utils/helpers';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './PhotoLightbox.module.css';
 
 interface PhotoLightboxProps {
-  photos: VacationPhoto[];
+  photos: Photo[];
   index: number;
   onClose: () => void;
   onIndexChange: (index: number) => void;
@@ -13,7 +13,7 @@ interface PhotoLightboxProps {
     id: number,
     updates: {
       caption?: string | null;
-      dateTaken?: string | null;
+      date_taken?: string | null;
     },
   ) => Promise<unknown>;
   onDelete: (id: number) => Promise<void>;
@@ -32,14 +32,15 @@ export function PhotoLightbox({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draft, setDraft] = useState({
     caption: '',
-    dateTaken: '',
+    date_taken: '',
   });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!photo) return;
     setDraft({
       caption: photo.caption ?? '',
-      dateTaken: photo.dateTaken ?? '',
+      date_taken: photo.date_taken ?? '',
     });
     setEditing(false);
   }, [photo]);
@@ -83,15 +84,16 @@ export function PhotoLightbox({
             >
               {editing ? 'Close editor' : 'Edit details'}
             </button>
-            <a
-              className="btn btnSecondary"
-              href={photo.imageUrl}
-              download
-              target="_blank"
-              rel="noreferrer"
-            >
-              Download
-            </a>
+            {photo.signed_url ? (
+              <a
+                className="btn btnSecondary"
+                href={photo.signed_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Download
+              </a>
+            ) : null}
             <button
               type="button"
               className="btn btnDanger"
@@ -121,7 +123,12 @@ export function PhotoLightbox({
               ‹
             </button>
           ) : null}
-          <img src={photo.imageUrl} alt={photo.caption || `Photo ${photo.id}`} />
+          {photo.signed_url ? (
+            <img
+              src={photo.signed_url}
+              alt={photo.caption || `Photo ${photo.id}`}
+            />
+          ) : null}
           {index < photos.length - 1 ? (
             <button
               type="button"
@@ -137,8 +144,8 @@ export function PhotoLightbox({
         <div className={styles.bottomBar}>
           <div className={styles.meta}>
             <strong>{photo.caption || `Photo ${photo.id}`}</strong>
-            {photo.dateTaken ? (
-              <p>Taken {formatDisplayDate(photo.dateTaken)}</p>
+            {photo.date_taken ? (
+              <p>Taken {formatDisplayDate(photo.date_taken)}</p>
             ) : null}
           </div>
         </div>
@@ -148,10 +155,13 @@ export function PhotoLightbox({
             className={styles.editPanel}
             onSubmit={(event) => {
               event.preventDefault();
+              setSaving(true);
               void onUpdate(photo.id, {
                 caption: draft.caption,
-                dateTaken: draft.dateTaken,
-              }).then(() => setEditing(false));
+                date_taken: draft.date_taken,
+              })
+                .then(() => setEditing(false))
+                .finally(() => setSaving(false));
             }}
           >
             <label>
@@ -167,14 +177,14 @@ export function PhotoLightbox({
               Date taken
               <input
                 type="date"
-                value={draft.dateTaken}
+                value={draft.date_taken}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...d, dateTaken: e.target.value }))
+                  setDraft((d) => ({ ...d, date_taken: e.target.value }))
                 }
               />
             </label>
-            <button type="submit" className="btn btnPrimary">
-              Save photo details
+            <button type="submit" className="btn btnPrimary" disabled={saving}>
+              {saving ? 'Saving…' : 'Save photo details'}
             </button>
           </form>
         ) : null}

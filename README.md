@@ -1,92 +1,124 @@
 # Diana's Vacation Journal
 
-A private vacation photo journal built with React, Vite, TypeScript, and Supabase.
+Private vacation photo journal powered by React, Vite, TypeScript, Supabase, and Vercel serverless API routes.
 
-## Features
+## Architecture
 
-- Warm travel-journal design with destination cards and photo galleries
-- Destinations and photos stored in Supabase Postgres
-- Photo files stored in Supabase Storage (`photos` bucket)
-- Italy seeded automatically when the destinations table is empty
-- Login against `app_settings` (username + password)
-- Upload, compress, browse, edit, download, and delete photos
-- Full-screen lightbox with keyboard navigation
-- Sort and search the gallery
-- Export journal metadata as JSON
-- Ready for Vercel static deployment
+- **Frontend** talks only to `/api/*` with `credentials: "include"`.
+- **Login** is verified on the server against `app_settings` using bcrypt.
+- **Session** is an HTTP-only signed cookie (`dj_session`). No password is stored in the browser.
+- **Destinations / photos** are read and written through protected API routes.
+- **Files** live in a private Supabase Storage bucket (`vacation-photos`).
+- The browser receives short-lived signed upload/download URLs only.
+- `SUPABASE_SERVICE_ROLE_KEY` is used only inside `api/` and must never be prefixed with `VITE_`.
 
 ## Database schema
 
-The app expects these tables:
+Existing tables (do not rename):
 
-- `destinations` — `id`, `name`, `flag`, `description`, `created_at`
-- `photos` — `id`, `destination_id`, `image_path`, `caption`, `date_taken`, `created_at`
-- `app_settings` — single row (`id = 1`) with `username` and `password`
+- `destinations(id, name, flag, description, created_at)`
+- `photos(id, destination_id, image_path, caption, date_taken, created_at)`
+- `app_settings(id, username, password, created_at)`
 
-Also create a **public** Storage bucket named `photos`.
+### Required SQL migration
 
-### Seed login credentials
-
-```sql
-INSERT INTO public.app_settings (id, username, password)
-VALUES (1, 'diana', 'your-password')
-ON CONFLICT (id) DO UPDATE
-SET username = EXCLUDED.username,
-    password = EXCLUDED.password;
-```
-
-### Storage policies
-
-Allow the publishable key to read/write objects in the `photos` bucket (adjust for your security needs). Example permissive policies for a private journal:
+Run:
 
 ```sql
--- Allow public read of journal images
-CREATE POLICY "Public read photos"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'photos');
+ALTER TABLE public.photos
+DROP CONSTRAINT IF EXISTS photos_destination_id_fkey;
 
--- Allow uploads/updates/deletes with the publishable key
-CREATE POLICY "Public write photos"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'photos');
-
-CREATE POLICY "Public update photos"
-ON storage.objects FOR UPDATE
-USING (bucket_id = 'photos');
-
-CREATE POLICY "Public delete photos"
-ON storage.objects FOR DELETE
-USING (bucket_id = 'photos');
+ALTER TABLE public.photos
+ADD CONSTRAINT photos_destination_id_fkey
+FOREIGN KEY (destination_id)
+REFERENCES public.destinations(id)
+ON DELETE CASCADE;
 ```
 
-Table RLS policies should similarly allow select/insert/update/delete for `destinations`, `photos`, and select for `app_settings` if you enable RLS.
+File: `supabase/migrations/001_photos_on_delete_cascade.sql`
 
-## Install
+### Storage bucket
+
+Create a **private** bucket named:
+
+```text
+vacation-photos
+```
+
+Photo paths look like:
+
+```text
+1/uuid-photo.jpg
+2/uuid-photo.webp
+```
+
+Filtering always uses `destination_id` in the database, never folder names alone.
+
+## Environment variables
+
+### Frontend
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+### Server (Vercel / `vercel dev`)
+
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SESSION_SECRET=
+```
+
+`SESSION_SECRET` must be a long random string.
+
+**Never** expose `SUPABASE_SERVICE_ROLE_KEY` through any `VITE_` variable.
+
+## Hash the journal password
+
+The login API rejects plaintext passwords. Convert the current `app_settings.password` value to bcrypt:
+
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run hash-password
+```
+
+To set a new password while hashing:
+
+```bash
+NEW_PASSWORD='your-new-password' SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run hash-password
+```
+
+The script never prints the plaintext password.
+
+### Changing the password later
+
+1. Run the hash script with `NEW_PASSWORD=...`
+2. Or generate a bcrypt hash yourself and update `app_settings.password` in Supabase
+3. Keep the username in `app_settings.username`
+
+## Local development
+
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-## Configure environment
+2. Copy env files and fill secrets:
 
 ```bash
 cp .env.example .env.local
 ```
 
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-```
-
-## Run locally
+3. Run password hashing once.
+4. Start the full app (frontend + API):
 
 ```bash
-npm run dev
+npm run dev:app
 ```
 
-Open the URL shown in the terminal (usually `http://localhost:5173`).
-
-Sign in with the username/password stored in `app_settings`.
+`vercel dev` serves Vite and `/api/*` together. Plain `npm run dev` only runs the Vite frontend and will not authenticate against the API.
 
 ## Build
 
@@ -94,66 +126,61 @@ Sign in with the username/password stored in `app_settings`.
 npm run build
 ```
 
-Preview:
-
-```bash
-npm run preview
-```
-
 ## Deploy to Vercel
 
-1. Push this repository to GitHub.
-2. Import the project in [Vercel](https://vercel.com).
-3. Framework preset: **Vite**.
-4. Build command: `npm run build`
-5. Output directory: `dist`
-6. Add environment variables:
+1. Push the repo to GitHub.
+2. Import the project in Vercel.
+3. Set environment variables:
    - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
-7. Deploy.
+   - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SESSION_SECRET`
+4. Deploy.
 
-`vercel.json` rewrites all routes to `index.html` so React Router paths such as `/destination/1` work after a refresh.
+`vercel.json` rewrites SPA routes to `index.html` while leaving `/api/*` alone.
 
-## How storage works
+## How login works
 
-| Data | Where it lives |
-| --- | --- |
-| Destinations | Supabase `destinations` table |
-| Photo metadata | Supabase `photos` table |
-| Photo files | Supabase Storage bucket `photos` (`image_path`) |
-| Login credentials | Supabase `app_settings` |
-| Auth session flag | `localStorage` key `journal_authenticated = true` |
+1. Browser posts username/password to `POST /api/login`.
+2. Server loads `app_settings` with the service-role client.
+3. Server compares password with `bcrypt.compare`.
+4. On success, server sets an HTTP-only cookie.
+5. Frontend calls `GET /api/session` on startup to decide login vs journal.
 
-Cover images use the destination’s earliest uploaded photo, or a local placeholder when none exist.
+Logout calls `POST /api/logout` and clears the cookie.
 
-## Privacy note
+## Destination / photo relationship
 
-The login screen is a **client-side privacy gate**, not true security.
+- Each photo row has `destination_id`.
+- `GET /api/destinations/:destinationId/photos` always filters with `.eq('destination_id', destinationId)`.
+- Italy photos cannot appear on Ireland because the query is scoped by destination id.
 
-- Username/password are compared in the browser against `app_settings`
-- The publishable key and client code can be inspected
-- Use this only to discourage casual visitors
+## Testing checklist
 
-The password itself is never written to Local Storage. Only `journal_authenticated = true` is stored after a successful login.
+### Login
 
-## Project structure
+1. Ensure password is bcrypt-hashed.
+2. Open the app and confirm the session loading screen appears.
+3. Sign in with the `app_settings` username/password.
+4. Refresh — you should stay signed in.
+5. Logout — cookie clears and login returns.
 
-```text
-src/
-  components/   Reusable UI
-  pages/        Home, destination, login
-  hooks/        Auth, destinations, photos
-  services/     Supabase data + auth helpers
-  types/        TypeScript interfaces matching the DB
-  utils/        Image processing + Supabase client
-  styles/       Global design tokens
-  data/         Seed / constants
-```
+### Destination separation
 
-## Scripts
+1. Create Italy and Ireland destinations.
+2. Upload different photos to each.
+3. Open Italy — only Italy photos appear.
+4. Open Ireland — only Ireland photos appear.
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start Vite development server |
-| `npm run build` | Typecheck and build for production |
-| `npm run preview` | Preview the production build |
+### Upload and delete
+
+1. Upload JPG/PNG/WebP photos.
+2. Confirm files appear under `vacation-photos/{destinationId}/...`.
+3. Edit caption / date.
+4. Delete a photo — Storage object and DB row are removed.
+5. Delete a destination — its photos are removed as well.
+
+## Important security warning
+
+Never put the service-role key in frontend code, Vite env vars (`VITE_*`), client bundles, or GitHub issues/logs. Anyone with that key has full database and storage access.

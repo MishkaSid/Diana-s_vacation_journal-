@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DestinationForm } from '../components/DestinationForm';
@@ -10,11 +10,7 @@ import { PhotoUpload } from '../components/PhotoUpload';
 import { PLACEHOLDER_COVER } from '../data/initialData';
 import { useDestination } from '../hooks/useDestinations';
 import { usePhotos } from '../hooks/usePhotos';
-import {
-  deleteDestination,
-  getCoverUrlForDestination,
-  updateDestination,
-} from '../services/db';
+import { deleteDestination, updateDestination } from '../services/journal';
 import type { DestinationInput } from '../types';
 import styles from './DestinationPage.module.css';
 
@@ -44,28 +40,18 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
     refresh: refreshPhotos,
   } = usePhotos(destination?.id);
 
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!destination) {
-      setCoverUrl(null);
-      return;
-    }
-    let cancelled = false;
-    void getCoverUrlForDestination(destination.id)
-      .then((url) => {
-        if (!cancelled) setCoverUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setCoverUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [destination, photos.length]);
+  const coverUrl = useMemo(() => {
+    if (photos.length === 0) return PLACEHOLDER_COVER;
+    const earliest = [...photos].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    )[0];
+    return earliest?.signed_url || PLACEHOLDER_COVER;
+  }, [photos]);
 
   const handleEdit = async (input: DestinationInput) => {
     if (!destination) return;
@@ -111,10 +97,7 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
           <>
             <section className={styles.hero}>
               <div className={styles.cover}>
-                <img
-                  src={coverUrl || PLACEHOLDER_COVER}
-                  alt={`${destination.name} cover`}
-                />
+                <img src={coverUrl} alt={`${destination.name} cover`} />
               </div>
               <div className={`cardSurface ${styles.details}`}>
                 <div className={styles.titleRow}>
@@ -216,7 +199,6 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
           onUpdate={updateMeta}
           onDelete={async (photoId) => {
             await remove(photoId);
-            await refresh();
           }}
         />
       ) : null}

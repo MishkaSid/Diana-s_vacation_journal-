@@ -23,9 +23,9 @@ export function GalleryControls({
           value={sort}
           onChange={(e) => onSortChange(e.target.value as PhotoSortOption)}
         >
-          <option value="upload">Upload order</option>
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
+          <option value="upload">Upload order</option>
         </select>
       </div>
       <div className={`${styles.group} ${styles.search}`}>
