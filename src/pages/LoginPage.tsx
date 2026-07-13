@@ -8,10 +8,12 @@ export function LoginPage() {
   const { authenticated, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const from =
     (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ||
@@ -27,15 +29,26 @@ export function LoginPage() {
     return <Navigate to={from} replace />;
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const ok = login(password);
-    if (ok) {
-      navigate(from, { replace: true });
-      return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const ok = await login(username, password);
+      if (ok) {
+        navigate(from, { replace: true });
+        return;
+      }
+      setError('Incorrect username or password');
+      setShake(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to sign in right now.',
+      );
+      setShake(true);
+    } finally {
+      setSubmitting(false);
     }
-    setError('Incorrect password');
-    setShake(true);
   };
 
   return (
@@ -44,9 +57,24 @@ export function LoginPage() {
       <div className={styles.card}>
         <h1 className={styles.title}>Diana&apos;s Vacation Journal</h1>
         <p className={styles.subtitle}>Private Travel Memories</p>
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={(e) => void handleSubmit(e)}>
           <div className={`field ${shake ? styles.shake : ''}`}>
-            <label htmlFor="journal-password">Passphrase</label>
+            <label htmlFor="journal-username">Username</label>
+            <input
+              id="journal-username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                if (error) setError('');
+              }}
+              required
+            />
+          </div>
+          <div className={`field ${shake ? styles.shake : ''}`}>
+            <label htmlFor="journal-password">Password</label>
             <div className={styles.passwordWrap}>
               <input
                 id="journal-password"
@@ -60,6 +88,7 @@ export function LoginPage() {
                 }}
                 aria-invalid={Boolean(error)}
                 aria-describedby={error ? 'password-error' : undefined}
+                required
               />
               <button
                 type="button"
@@ -78,8 +107,13 @@ export function LoginPage() {
           >
             {error}
           </div>
-          <button type="submit" className="btn btnPrimary" style={{ width: '100%' }}>
-            Enter journal
+          <button
+            type="submit"
+            className="btn btnPrimary"
+            style={{ width: '100%' }}
+            disabled={submitting}
+          >
+            {submitting ? 'Signing in…' : 'Enter journal'}
           </button>
         </form>
         <p className={styles.hint}>A private keepsake for cherished travels.</p>

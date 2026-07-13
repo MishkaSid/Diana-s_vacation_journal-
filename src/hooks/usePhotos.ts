@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
-  PhotoFilterOption,
   PhotoMetadataUpdate,
   PhotoSortOption,
   VacationPhoto,
@@ -12,18 +11,17 @@ import {
   updatePhotoMetadata,
 } from '../services/db';
 
-export function usePhotos(destinationId: string | undefined) {
+export function usePhotos(destinationId: number | undefined) {
   const [photos, setPhotos] = useState<VacationPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<PhotoFilterOption>('all');
   const [sort, setSort] = useState<PhotoSortOption>('upload');
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
 
   const refresh = useCallback(async () => {
-    if (!destinationId) {
+    if (destinationId === undefined) {
       setPhotos([]);
       setLoading(false);
       return;
@@ -46,7 +44,7 @@ export function usePhotos(destinationId: string | undefined) {
 
   const upload = useCallback(
     async (files: File[]) => {
-      if (!destinationId || files.length === 0) return [];
+      if (destinationId === undefined || files.length === 0) return [];
       setUploading(true);
       setUploadProgress({ done: 0, total: files.length });
       try {
@@ -64,7 +62,7 @@ export function usePhotos(destinationId: string | undefined) {
   );
 
   const updateMeta = useCallback(
-    async (id: string, updates: PhotoMetadataUpdate) => {
+    async (id: number, updates: PhotoMetadataUpdate) => {
       const updated = await updatePhotoMetadata(id, updates);
       setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
       return updated;
@@ -72,7 +70,7 @@ export function usePhotos(destinationId: string | undefined) {
     [],
   );
 
-  const remove = useCallback(async (id: string) => {
+  const remove = useCallback(async (id: number) => {
     await deletePhoto(id);
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   }, []);
@@ -80,19 +78,11 @@ export function usePhotos(destinationId: string | undefined) {
   const visiblePhotos = useMemo(() => {
     let list = [...photos];
 
-    if (filter === 'favourites') {
-      list = list.filter((p) => p.isFavourite);
-    }
-
     const query = search.trim().toLowerCase();
     if (query) {
-      list = list.filter((p) => {
-        const haystack = [p.caption, p.location, p.notes]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return haystack.includes(query);
-      });
+      list = list.filter((p) =>
+        (p.caption ?? '').toLowerCase().includes(query),
+      );
     }
 
     if (sort === 'newest') {
@@ -115,15 +105,13 @@ export function usePhotos(destinationId: string | undefined) {
     }
 
     return list;
-  }, [photos, filter, sort, search]);
+  }, [photos, sort, search]);
 
   return {
     photos,
     visiblePhotos,
     loading,
     error,
-    filter,
-    setFilter,
     sort,
     setSort,
     search,

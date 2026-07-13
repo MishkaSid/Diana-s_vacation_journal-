@@ -25,7 +25,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage onLogout={handleLogout} />} />
         <Route
-          path="/destination/:slug"
+          path="/destination/:id"
           element={<DestinationPage onLogout={handleLogout} />}
         />
       </Route>

@@ -2,11 +2,14 @@ import {
   ACCEPTED_IMAGE_TYPES,
   LARGE_FILE_WARNING_BYTES,
   MAX_IMAGE_DIMENSION,
-  THUMBNAIL_DIMENSION,
 } from '../data/initialData';
 
 export function isAcceptedImageFile(file: File): boolean {
-  if (ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
+  if (
+    ACCEPTED_IMAGE_TYPES.includes(
+      file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
+    )
+  ) {
     return true;
   }
   const name = file.name.toLowerCase();
@@ -76,15 +79,11 @@ function drawResized(
 
 export interface ProcessedImage {
   imageBlob: Blob;
-  thumbnailBlob: Blob;
   mimeType: string;
   fileName: string;
 }
 
-/**
- * Resize large images in the browser before IndexedDB storage.
- * Longest side capped at MAX_IMAGE_DIMENSION; a smaller thumbnail is also produced.
- */
+/** Resize large images in the browser before uploading to Supabase Storage. */
 export async function processImageFile(file: File): Promise<ProcessedImage> {
   const img = await loadImageFromFile(file);
   const outputType =
@@ -92,35 +91,14 @@ export async function processImageFile(file: File): Promise<ProcessedImage> {
       ? file.type
       : 'image/jpeg';
   const quality = outputType === 'image/png' ? 0.92 : 0.85;
-
   const mainCanvas = drawResized(img, MAX_IMAGE_DIMENSION);
-  const thumbCanvas = drawResized(img, THUMBNAIL_DIMENSION);
-
-  const [imageBlob, thumbnailBlob] = await Promise.all([
-    canvasToBlob(mainCanvas, outputType, quality),
-    canvasToBlob(thumbCanvas, outputType, quality * 0.9),
-  ]);
+  const imageBlob = await canvasToBlob(mainCanvas, outputType, quality);
 
   return {
     imageBlob,
-    thumbnailBlob,
     mimeType: outputType,
     fileName: file.name,
   };
-}
-
-export async function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('Failed to read blob'));
-    reader.readAsDataURL(blob);
-  });
-}
-
-export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
-  return response.blob();
 }
 
 export function downloadBlob(blob: Blob, fileName: string): void {
@@ -130,4 +108,8 @@ export function downloadBlob(blob: Blob, fileName: string): void {
   anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function safeStorageFileName(fileName: string): string {
+  return fileName.replace(/[^\w.\-]+/g, '_').slice(0, 120);
 }

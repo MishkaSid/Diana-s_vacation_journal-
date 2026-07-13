@@ -1,317 +1,227 @@
-import { ITALY_DESTINATION } from '../data/initialData';
+import { PHOTOS_BUCKET } from '../data/initialData';
 import type {
   AppSettings,
+  AppSettingsRow,
   Destination,
   DestinationInput,
+  DestinationRow,
   JournalExport,
   PhotoMetadataUpdate,
+  PhotoRow,
   VacationPhoto,
 } from '../types';
-import { createId, slugify } from '../utils/helpers';
-import { blobToDataUrl, dataUrlToBlob, processImageFile } from '../utils/imageProcessing';
+import { processImageFile, safeStorageFileName } from '../utils/imageProcessing';
+import { supabase } from '../utils/supabase';
+import { ITALY_SEED } from '../data/initialData';
 
-const DB_NAME = 'dianas-vacation-journal';
-const DB_VERSION = 1;
+function mapDestination(row: DestinationRow): Destination {
+  return {
+    id: row.id,
+    name: row.name,
+    flag: row.flag,
+    description: row.description,
+    createdAt: row.created_at,
+  };
+}
 
-const STORE_DESTINATIONS = 'destinations';
-const STORE_PHOTOS = 'photos';
-const STORE_SETTINGS = 'settings';
+function publicImageUrl(imagePath: string): string {
+  const { data } = supabase.storage.from(PHOTOS_BUCKET).getPublicUrl(imagePath);
+  return data.publicUrl;
+}
 
-export class IndexedDbUnavailableError extends Error {
-  constructor(message = 'IndexedDB is unavailable in this browser.') {
-    super(message);
-    this.name = 'IndexedDbUnavailableError';
+function mapPhoto(row: PhotoRow): VacationPhoto {
+  return {
+    id: row.id,
+    destinationId: row.destination_id,
+    imagePath: row.image_path,
+    imageUrl: publicImageUrl(row.image_path),
+    caption: row.caption,
+    dateTaken: row.date_taken,
+    createdAt: row.created_at,
+  };
+}
+
+function throwIfError(error: { message: string } | null, fallback: string): void {
+  if (error) throw new Error(error.message || fallback);
+}
+
+export async function getAppSettings(): Promise<AppSettings | null> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle();
+
+  throwIfError(error, 'Failed to load app settings.');
+  if (!data) return null;
+
+  const row = data as AppSettingsRow;
+  return {
+    id: row.id,
+    username: row.username,
+    password: row.password,
+    createdAt: row.created_at,
+  };
+}
+
+export async function validateCredentials(
+  username: string,
+  password: string,
+): Promise<boolean> {
+  const settings = await getAppSettings();
+  if (!settings) {
+    throw new Error('Journal login is not configured in the database.');
   }
-}
-
-function requireIndexedDb(): IDBFactory {
-  if (typeof indexedDB === 'undefined') {
-    throw new IndexedDbUnavailableError();
-  }
-  return indexedDB;
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  const idb = requireIndexedDb();
-
-  return new Promise((resolve, reject) => {
-    const request = idb.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-
-      if (!db.objectStoreNames.contains(STORE_DESTINATIONS)) {
-        const store = db.createObjectStore(STORE_DESTINATIONS, { keyPath: 'id' });
-        store.createIndex('slug', 'slug', { unique: true });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-
-      if (!db.objectStoreNames.contains(STORE_PHOTOS)) {
-        const store = db.createObjectStore(STORE_PHOTOS, { keyPath: 'id' });
-        store.createIndex('destinationId', 'destinationId', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-
-      if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
-        db.createObjectStore(STORE_SETTINGS, { keyPath: 'id' });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(
-        request.error ??
-          new IndexedDbUnavailableError('Failed to open IndexedDB.'),
-      );
-  });
-}
-
-function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
-  });
-}
-
-function transactionDone(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'));
-    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
-  });
-}
-
-async function withStore<T>(
-  storeName: string,
-  mode: IDBTransactionMode,
-  work: (store: IDBObjectStore) => Promise<T> | T,
-): Promise<T> {
-  const db = await openDatabase();
-  try {
-    const tx = db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
-    const result = await work(store);
-    await transactionDone(tx);
-    return result;
-  } finally {
-    db.close();
-  }
-}
-
-async function ensureUniqueSlug(baseSlug: string, excludeId?: string): Promise<string> {
-  const destinations = await getAllDestinations();
-  let slug = baseSlug;
-  let counter = 2;
-  while (destinations.some((d) => d.slug === slug && d.id !== excludeId)) {
-    slug = `${baseSlug}-${counter}`;
-    counter += 1;
-  }
-  return slug;
-}
-
-export async function isIndexedDbAvailable(): Promise<boolean> {
-  try {
-    requireIndexedDb();
-    const db = await openDatabase();
-    db.close();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function getSettings(): Promise<AppSettings | undefined> {
-  return withStore(STORE_SETTINGS, 'readonly', (store) =>
-    requestToPromise(store.get('app') as IDBRequest<AppSettings | undefined>),
+  return (
+    settings.username === username.trim() && settings.password === password
   );
 }
 
-export async function saveSettings(settings: AppSettings): Promise<void> {
-  await withStore(STORE_SETTINGS, 'readwrite', (store) => {
-    store.put(settings);
+export async function seedInitialData(): Promise<void> {
+  const { count, error } = await supabase
+    .from('destinations')
+    .select('*', { count: 'exact', head: true });
+
+  throwIfError(error, 'Failed to check destinations.');
+  if ((count ?? 0) > 0) return;
+
+  const { error: insertError } = await supabase.from('destinations').insert({
+    name: ITALY_SEED.name,
+    flag: ITALY_SEED.flag,
+    description: ITALY_SEED.description,
   });
+  throwIfError(insertError, 'Failed to seed Italy destination.');
 }
 
 export async function getAllDestinations(): Promise<Destination[]> {
-  const items = await withStore(STORE_DESTINATIONS, 'readonly', (store) =>
-    requestToPromise(store.getAll() as IDBRequest<Destination[]>),
-  );
-  return items.sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-}
+  const { data, error } = await supabase
+    .from('destinations')
+    .select('*')
+    .order('created_at', { ascending: true });
 
-export async function getDestinationBySlug(
-  slug: string,
-): Promise<Destination | undefined> {
-  return withStore(STORE_DESTINATIONS, 'readonly', async (store) => {
-    const index = store.index('slug');
-    return requestToPromise(index.get(slug) as IDBRequest<Destination | undefined>);
-  });
+  throwIfError(error, 'Failed to load destinations.');
+  return ((data ?? []) as DestinationRow[]).map(mapDestination);
 }
 
 export async function getDestinationById(
-  id: string,
+  id: number,
 ): Promise<Destination | undefined> {
-  return withStore(STORE_DESTINATIONS, 'readonly', (store) =>
-    requestToPromise(store.get(id) as IDBRequest<Destination | undefined>),
-  );
-}
+  const { data, error } = await supabase
+    .from('destinations')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
 
-export async function saveDestination(destination: Destination): Promise<void> {
-  await withStore(STORE_DESTINATIONS, 'readwrite', (store) => {
-    store.put(destination);
-  });
-}
-
-export async function deleteDestination(id: string): Promise<void> {
-  const photos = await getPhotosByDestination(id);
-  const db = await openDatabase();
-  try {
-    const tx = db.transaction([STORE_DESTINATIONS, STORE_PHOTOS], 'readwrite');
-    tx.objectStore(STORE_DESTINATIONS).delete(id);
-    const photoStore = tx.objectStore(STORE_PHOTOS);
-    for (const photo of photos) {
-      photoStore.delete(photo.id);
-    }
-    await transactionDone(tx);
-  } finally {
-    db.close();
-  }
+  throwIfError(error, 'Failed to load destination.');
+  return data ? mapDestination(data as DestinationRow) : undefined;
 }
 
 export async function createDestination(
   input: DestinationInput,
 ): Promise<Destination> {
-  const now = new Date().toISOString();
-  const slug = await ensureUniqueSlug(slugify(input.name));
-  const destination: Destination = {
-    id: createId(),
-    slug,
-    name: input.name.trim(),
-    flag: input.flag?.trim() || undefined,
-    tripTitle: input.tripTitle?.trim() || undefined,
-    startDate: input.startDate || undefined,
-    endDate: input.endDate || undefined,
-    description: input.description?.trim() || undefined,
-    createdAt: now,
-    updatedAt: now,
-  };
+  const { data, error } = await supabase
+    .from('destinations')
+    .insert({
+      name: input.name.trim(),
+      flag: input.flag?.trim() || null,
+      description: input.description?.trim() || null,
+    })
+    .select('*')
+    .single();
 
-  if (input.coverFile) {
-    const processed = await processImageFile(input.coverFile);
-    const photo: VacationPhoto = {
-      id: createId(),
-      destinationId: destination.id,
-      fileName: processed.fileName,
-      mimeType: processed.mimeType,
-      imageBlob: processed.imageBlob,
-      thumbnailBlob: processed.thumbnailBlob,
-      isFavourite: false,
-      createdAt: now,
-    };
-    destination.coverPhotoId = photo.id;
-    const db = await openDatabase();
-    try {
-      const tx = db.transaction([STORE_DESTINATIONS, STORE_PHOTOS], 'readwrite');
-      tx.objectStore(STORE_DESTINATIONS).put(destination);
-      tx.objectStore(STORE_PHOTOS).put(photo);
-      await transactionDone(tx);
-    } finally {
-      db.close();
-    }
-    return destination;
-  }
-
-  await saveDestination(destination);
-  return destination;
+  throwIfError(error, 'Failed to create destination.');
+  return mapDestination(data as DestinationRow);
 }
 
 export async function updateDestination(
-  id: string,
+  id: number,
   input: DestinationInput,
-  options?: { clearCover?: boolean },
 ): Promise<Destination> {
-  const existing = await getDestinationById(id);
-  if (!existing) throw new Error('Destination not found');
+  const { data, error } = await supabase
+    .from('destinations')
+    .update({
+      name: input.name.trim(),
+      flag: input.flag?.trim() || null,
+      description: input.description?.trim() || null,
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
 
-  const slug = await ensureUniqueSlug(slugify(input.name), id);
-  const updated: Destination = {
-    ...existing,
-    slug,
-    name: input.name.trim(),
-    flag: input.flag?.trim() || undefined,
-    tripTitle: input.tripTitle?.trim() || undefined,
-    startDate: input.startDate || undefined,
-    endDate: input.endDate || undefined,
-    description: input.description?.trim() || undefined,
-    updatedAt: new Date().toISOString(),
-  };
+  throwIfError(error, 'Failed to update destination.');
+  return mapDestination(data as DestinationRow);
+}
 
-  if (options?.clearCover) {
-    updated.coverPhotoId = undefined;
-    updated.coverPublicPath = undefined;
+export async function deleteDestination(id: number): Promise<void> {
+  const photos = await getPhotosByDestination(id);
+
+  if (photos.length > 0) {
+    const paths = photos.map((photo) => photo.imagePath);
+    const { error: storageError } = await supabase.storage
+      .from(PHOTOS_BUCKET)
+      .remove(paths);
+    throwIfError(storageError, 'Failed to delete destination photos from storage.');
+
+    const { error: photosError } = await supabase
+      .from('photos')
+      .delete()
+      .eq('destination_id', id);
+    throwIfError(photosError, 'Failed to delete destination photos.');
   }
 
-  if (input.coverFile) {
-    const processed = await processImageFile(input.coverFile);
-    const photo: VacationPhoto = {
-      id: createId(),
-      destinationId: updated.id,
-      fileName: processed.fileName,
-      mimeType: processed.mimeType,
-      imageBlob: processed.imageBlob,
-      thumbnailBlob: processed.thumbnailBlob,
-      isFavourite: false,
-      createdAt: new Date().toISOString(),
-    };
-    updated.coverPhotoId = photo.id;
-    updated.coverPublicPath = undefined;
-
-    const db = await openDatabase();
-    try {
-      const tx = db.transaction([STORE_DESTINATIONS, STORE_PHOTOS], 'readwrite');
-      tx.objectStore(STORE_DESTINATIONS).put(updated);
-      tx.objectStore(STORE_PHOTOS).put(photo);
-      await transactionDone(tx);
-    } finally {
-      db.close();
-    }
-    return updated;
-  }
-
-  await saveDestination(updated);
-  return updated;
+  const { error } = await supabase.from('destinations').delete().eq('id', id);
+  throwIfError(error, 'Failed to delete destination.');
 }
 
 export async function getPhotosByDestination(
-  destinationId: string,
+  destinationId: number,
 ): Promise<VacationPhoto[]> {
-  const photos = await withStore(STORE_PHOTOS, 'readonly', async (store) => {
-    const index = store.index('destinationId');
-    return requestToPromise(
-      index.getAll(destinationId) as IDBRequest<VacationPhoto[]>,
-    );
-  });
-  return photos.sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-}
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .eq('destination_id', destinationId)
+    .order('created_at', { ascending: true });
 
-export async function getPhotoById(id: string): Promise<VacationPhoto | undefined> {
-  return withStore(STORE_PHOTOS, 'readonly', (store) =>
-    requestToPromise(store.get(id) as IDBRequest<VacationPhoto | undefined>),
-  );
+  throwIfError(error, 'Failed to load photos.');
+  return ((data ?? []) as PhotoRow[]).map(mapPhoto);
 }
 
 export async function getAllPhotos(): Promise<VacationPhoto[]> {
-  return withStore(STORE_PHOTOS, 'readonly', (store) =>
-    requestToPromise(store.getAll() as IDBRequest<VacationPhoto[]>),
-  );
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  throwIfError(error, 'Failed to load photos.');
+  return ((data ?? []) as PhotoRow[]).map(mapPhoto);
+}
+
+export async function getPhotoCountMap(): Promise<Record<number, number>> {
+  const photos = await getAllPhotos();
+  return photos.reduce<Record<number, number>>((acc, photo) => {
+    acc[photo.destinationId] = (acc[photo.destinationId] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+export async function getCoverUrlForDestination(
+  destinationId: number,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('photos')
+    .select('image_path')
+    .eq('destination_id', destinationId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  throwIfError(error, 'Failed to load cover photo.');
+  if (!data) return null;
+  return publicImageUrl((data as { image_path: string }).image_path);
 }
 
 export async function addPhotos(
-  destinationId: string,
+  destinationId: number,
   files: File[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<VacationPhoto[]> {
@@ -320,20 +230,33 @@ export async function addPhotos(
 
   for (const file of files) {
     const processed = await processImageFile(file);
-    const photo: VacationPhoto = {
-      id: createId(),
-      destinationId,
-      fileName: processed.fileName,
-      mimeType: processed.mimeType,
-      imageBlob: processed.imageBlob,
-      thumbnailBlob: processed.thumbnailBlob,
-      isFavourite: false,
-      createdAt: new Date().toISOString(),
-    };
-    await withStore(STORE_PHOTOS, 'readwrite', (store) => {
-      store.put(photo);
-    });
-    created.push(photo);
+    const path = `${destinationId}/${Date.now()}-${safeStorageFileName(processed.fileName)}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(PHOTOS_BUCKET)
+      .upload(path, processed.imageBlob, {
+        contentType: processed.mimeType,
+        upsert: false,
+      });
+    throwIfError(uploadError, `Failed to upload ${file.name}.`);
+
+    const { data, error } = await supabase
+      .from('photos')
+      .insert({
+        destination_id: destinationId,
+        image_path: path,
+        caption: null,
+        date_taken: null,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      await supabase.storage.from(PHOTOS_BUCKET).remove([path]);
+      throw new Error(error.message || `Failed to save ${file.name}.`);
+    }
+
+    created.push(mapPhoto(data as PhotoRow));
     done += 1;
     onProgress?.(done, files.length);
   }
@@ -342,86 +265,49 @@ export async function addPhotos(
 }
 
 export async function updatePhotoMetadata(
-  id: string,
+  id: number,
   updates: PhotoMetadataUpdate,
 ): Promise<VacationPhoto> {
-  const existing = await getPhotoById(id);
-  if (!existing) throw new Error('Photo not found');
-
-  const updated: VacationPhoto = {
-    ...existing,
-    caption: updates.caption !== undefined ? updates.caption : existing.caption,
-    dateTaken:
-      updates.dateTaken !== undefined ? updates.dateTaken || undefined : existing.dateTaken,
-    location:
-      updates.location !== undefined ? updates.location || undefined : existing.location,
-    notes: updates.notes !== undefined ? updates.notes || undefined : existing.notes,
-    isFavourite:
-      updates.isFavourite !== undefined ? updates.isFavourite : existing.isFavourite,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await withStore(STORE_PHOTOS, 'readwrite', (store) => {
-    store.put(updated);
-  });
-  return updated;
-}
-
-export async function deletePhoto(id: string): Promise<void> {
-  const destinations = await getAllDestinations();
-  const covering = destinations.filter((d) => d.coverPhotoId === id);
-
-  const db = await openDatabase();
-  try {
-    const tx = db.transaction([STORE_PHOTOS, STORE_DESTINATIONS], 'readwrite');
-    tx.objectStore(STORE_PHOTOS).delete(id);
-    for (const destination of covering) {
-      tx.objectStore(STORE_DESTINATIONS).put({
-        ...destination,
-        coverPhotoId: undefined,
-        updatedAt: new Date().toISOString(),
-      });
-    }
-    await transactionDone(tx);
-  } finally {
-    db.close();
+  const payload: Record<string, string | null> = {};
+  if (updates.caption !== undefined) {
+    payload.caption = updates.caption?.trim() || null;
   }
-}
-
-export async function setDestinationCover(
-  destinationId: string,
-  photoId: string | undefined,
-): Promise<Destination> {
-  const destination = await getDestinationById(destinationId);
-  if (!destination) throw new Error('Destination not found');
-
-  const updated: Destination = {
-    ...destination,
-    coverPhotoId: photoId,
-    coverPublicPath: photoId ? undefined : destination.coverPublicPath,
-    updatedAt: new Date().toISOString(),
-  };
-  await saveDestination(updated);
-  return updated;
-}
-
-export async function seedInitialData(): Promise<void> {
-  const settings = await getSettings();
-  if (settings?.seeded) return;
-
-  const existing = await getAllDestinations();
-  if (existing.length === 0) {
-    const now = new Date().toISOString();
-    const italy: Destination = {
-      id: createId(),
-      ...ITALY_DESTINATION,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await saveDestination(italy);
+  if (updates.dateTaken !== undefined) {
+    payload.date_taken = updates.dateTaken || null;
   }
 
-  await saveSettings({ id: 'app', seeded: true });
+  const { data, error } = await supabase
+    .from('photos')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  throwIfError(error, 'Failed to update photo.');
+  return mapPhoto(data as PhotoRow);
+}
+
+export async function deletePhoto(id: number): Promise<void> {
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  throwIfError(error, 'Failed to find photo.');
+  if (!data) return;
+
+  const row = data as PhotoRow;
+  const { error: storageError } = await supabase.storage
+    .from(PHOTOS_BUCKET)
+    .remove([row.image_path]);
+  throwIfError(storageError, 'Failed to delete photo file.');
+
+  const { error: deleteError } = await supabase
+    .from('photos')
+    .delete()
+    .eq('id', id);
+  throwIfError(deleteError, 'Failed to delete photo.');
 }
 
 export async function exportJournal(): Promise<JournalExport> {
@@ -430,102 +316,10 @@ export async function exportJournal(): Promise<JournalExport> {
     getAllPhotos(),
   ]);
 
-  const exportedPhotos = await Promise.all(
-    photos.map(async (photo) => {
-      const imageBase64 = await blobToDataUrl(photo.imageBlob);
-      const thumbnailBase64 = photo.thumbnailBlob
-        ? await blobToDataUrl(photo.thumbnailBlob)
-        : undefined;
-      return {
-        id: photo.id,
-        destinationId: photo.destinationId,
-        fileName: photo.fileName,
-        mimeType: photo.mimeType,
-        imageBase64,
-        thumbnailBase64,
-        caption: photo.caption,
-        dateTaken: photo.dateTaken,
-        location: photo.location,
-        notes: photo.notes,
-        isFavourite: photo.isFavourite,
-        createdAt: photo.createdAt,
-        updatedAt: photo.updatedAt,
-      };
-    }),
-  );
-
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     destinations,
-    photos: exportedPhotos,
+    photos: photos.map(({ imageUrl: _url, ...rest }) => rest),
   };
-}
-
-export async function importJournal(data: JournalExport): Promise<void> {
-  if (!data || data.version !== 1 || !Array.isArray(data.destinations)) {
-    throw new Error('Invalid journal backup file.');
-  }
-
-  const photos: VacationPhoto[] = await Promise.all(
-    (data.photos ?? []).map(async (entry) => ({
-      id: entry.id,
-      destinationId: entry.destinationId,
-      fileName: entry.fileName,
-      mimeType: entry.mimeType,
-      imageBlob: await dataUrlToBlob(entry.imageBase64),
-      thumbnailBlob: entry.thumbnailBase64
-        ? await dataUrlToBlob(entry.thumbnailBase64)
-        : undefined,
-      caption: entry.caption,
-      dateTaken: entry.dateTaken,
-      location: entry.location,
-      notes: entry.notes,
-      isFavourite: Boolean(entry.isFavourite),
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    })),
-  );
-
-  const db = await openDatabase();
-  try {
-    const tx = db.transaction(
-      [STORE_DESTINATIONS, STORE_PHOTOS, STORE_SETTINGS],
-      'readwrite',
-    );
-
-    const destStore = tx.objectStore(STORE_DESTINATIONS);
-    const photoStore = tx.objectStore(STORE_PHOTOS);
-    const settingsStore = tx.objectStore(STORE_SETTINGS);
-
-    const existingDests = await requestToPromise(
-      destStore.getAll() as IDBRequest<Destination[]>,
-    );
-    const existingPhotos = await requestToPromise(
-      photoStore.getAll() as IDBRequest<VacationPhoto[]>,
-    );
-
-    for (const item of existingDests) destStore.delete(item.id);
-    for (const item of existingPhotos) photoStore.delete(item.id);
-
-    for (const destination of data.destinations) {
-      destStore.put(destination);
-    }
-    for (const photo of photos) {
-      photoStore.put(photo);
-    }
-    settingsStore.put({ id: 'app', seeded: true } satisfies AppSettings);
-
-    await transactionDone(tx);
-  } finally {
-    db.close();
-  }
-}
-
-export async function getPhotoCountMap(): Promise<Record<string, number>> {
-  const photos = await getAllPhotos();
-  return photos.reduce<Record<string, number>>((acc, photo) => {
-    acc[photo.destinationId] = (acc[photo.destinationId] ?? 0) + 1;
-    return acc;
-  }, {});
 }

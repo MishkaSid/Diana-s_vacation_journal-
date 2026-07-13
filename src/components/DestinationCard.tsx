@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PLACEHOLDER_COVER } from '../data/initialData';
-import { useObjectUrl } from '../hooks/useObjectUrl';
-import { getPhotoById } from '../services/db';
+import { getCoverUrlForDestination } from '../services/db';
 import type { Destination } from '../types';
 import styles from './DestinationCard.module.css';
 
@@ -12,39 +11,35 @@ interface DestinationCardProps {
 }
 
 export function DestinationCard({ destination, photoCount }: DestinationCardProps) {
-  const [coverBlob, setCoverBlob] = useState<Blob | null>(null);
-  const coverUrl = useObjectUrl(coverBlob);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function loadCover() {
-      if (!destination.coverPhotoId) {
-        setCoverBlob(null);
-        return;
-      }
-      const photo = await getPhotoById(destination.coverPhotoId);
-      if (!cancelled) {
-        setCoverBlob(photo?.thumbnailBlob ?? photo?.imageBlob ?? null);
-      }
-    }
-    void loadCover();
+    void getCoverUrlForDestination(destination.id)
+      .then((url) => {
+        if (!cancelled) setCoverUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setCoverUrl(null);
+      });
     return () => {
       cancelled = true;
     };
-  }, [destination.coverPhotoId]);
+  }, [destination.id, photoCount]);
 
-  const imageSrc =
-    coverUrl || destination.coverPublicPath || PLACEHOLDER_COVER;
   const countLabel = photoCount === 1 ? '1 photo' : `${photoCount} photos`;
 
   return (
     <Link
-      to={`/destination/${destination.slug}`}
+      to={`/destination/${destination.id}`}
       className={styles.card}
       aria-label={`Open ${destination.name} journal`}
     >
       <div className={styles.cover}>
-        <img src={imageSrc} alt={`${destination.name} cover`} />
+        <img
+          src={coverUrl || PLACEHOLDER_COVER}
+          alt={`${destination.name} cover`}
+        />
       </div>
       <div className={styles.body}>
         <div className={styles.titleRow}>

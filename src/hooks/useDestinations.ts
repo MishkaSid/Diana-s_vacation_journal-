@@ -4,46 +4,36 @@ import {
   createDestination,
   deleteDestination,
   getAllDestinations,
-  getDestinationBySlug,
+  getDestinationById,
   getPhotoCountMap,
-  IndexedDbUnavailableError,
-  isIndexedDbAvailable,
   seedInitialData,
   updateDestination,
 } from '../services/db';
 
 interface UseDestinationsResult {
   destinations: Destination[];
-  photoCounts: Record<string, number>;
+  photoCounts: Record<number, number>;
   loading: boolean;
   error: string | null;
-  dbAvailable: boolean;
   refresh: () => Promise<void>;
   addDestination: (input: DestinationInput) => Promise<Destination>;
   editDestination: (
-    id: string,
+    id: number,
     input: DestinationInput,
-    options?: { clearCover?: boolean },
   ) => Promise<Destination>;
-  removeDestination: (id: string) => Promise<void>;
+  removeDestination: (id: number) => Promise<void>;
 }
 
 export function useDestinations(): UseDestinationsResult {
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
+  const [photoCounts, setPhotoCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dbAvailable, setDbAvailable] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const available = await isIndexedDbAvailable();
-      setDbAvailable(available);
-      if (!available) {
-        throw new IndexedDbUnavailableError();
-      }
       await seedInitialData();
       const [list, counts] = await Promise.all([
         getAllDestinations(),
@@ -52,10 +42,9 @@ export function useDestinations(): UseDestinationsResult {
       setDestinations(list);
       setPhotoCounts(counts);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to load destinations.';
-      setError(message);
-      setDbAvailable(!(err instanceof IndexedDbUnavailableError));
+      setError(
+        err instanceof Error ? err.message : 'Failed to load destinations.',
+      );
     } finally {
       setLoading(false);
     }
@@ -75,12 +64,8 @@ export function useDestinations(): UseDestinationsResult {
   );
 
   const editDestination = useCallback(
-    async (
-      id: string,
-      input: DestinationInput,
-      options?: { clearCover?: boolean },
-    ) => {
-      const updated = await updateDestination(id, input, options);
+    async (id: number, input: DestinationInput) => {
+      const updated = await updateDestination(id, input);
       await refresh();
       return updated;
     },
@@ -88,7 +73,7 @@ export function useDestinations(): UseDestinationsResult {
   );
 
   const removeDestination = useCallback(
-    async (id: string) => {
+    async (id: number) => {
       await deleteDestination(id);
       await refresh();
     },
@@ -100,7 +85,6 @@ export function useDestinations(): UseDestinationsResult {
     photoCounts,
     loading,
     error,
-    dbAvailable,
     refresh,
     addDestination,
     editDestination,
@@ -108,30 +92,35 @@ export function useDestinations(): UseDestinationsResult {
   };
 }
 
-export function useDestination(slug: string | undefined) {
+export function useDestination(idParam: string | undefined) {
   const [destination, setDestination] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!slug) {
+    const id = Number(idParam);
+    if (!idParam || Number.isNaN(id)) {
       setDestination(null);
+      setError('Destination not found.');
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
     try {
-      const found = await getDestinationBySlug(slug);
+      const found = await getDestinationById(id);
       setDestination(found ?? null);
       if (!found) setError('Destination not found.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load destination.');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load destination.',
+      );
       setDestination(null);
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [idParam]);
 
   useEffect(() => {
     void refresh();

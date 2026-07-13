@@ -13,9 +13,6 @@ interface DestinationFormProps {
 const emptyForm = {
   name: '',
   flag: '',
-  tripTitle: '',
-  startDate: '',
-  endDate: '',
   description: '',
 };
 
@@ -26,7 +23,6 @@ export function DestinationForm({
   onSubmit,
 }: DestinationFormProps) {
   const [form, setForm] = useState(emptyForm);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,15 +32,11 @@ export function DestinationForm({
       setForm({
         name: initial.name,
         flag: initial.flag ?? '',
-        tripTitle: initial.tripTitle ?? '',
-        startDate: initial.startDate ?? '',
-        endDate: initial.endDate ?? '',
         description: initial.description ?? '',
       });
     } else {
       setForm(emptyForm);
     }
-    setCoverFile(null);
     setError(null);
   }, [open, initial]);
 
@@ -60,11 +52,7 @@ export function DestinationForm({
       await onSubmit({
         name: form.name,
         flag: form.flag,
-        tripTitle: form.tripTitle,
-        startDate: form.startDate,
-        endDate: form.endDate,
         description: form.description,
-        coverFile,
       });
       onClose();
     } catch (err) {
@@ -105,48 +93,14 @@ export function DestinationForm({
             required
           />
         </div>
-        <div className="formRow">
-          <div className="field">
-            <label htmlFor="dest-flag">Flag emoji (optional)</label>
-            <input
-              id="dest-flag"
-              value={form.flag}
-              onChange={(e) => setForm((f) => ({ ...f, flag: e.target.value }))}
-              placeholder="🇮🇹"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dest-title">Trip title (optional)</label>
-            <input
-              id="dest-title"
-              value={form.tripTitle}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tripTitle: e.target.value }))
-              }
-            />
-          </div>
-        </div>
-        <div className="formRow">
-          <div className="field">
-            <label htmlFor="dest-start">Start date</label>
-            <input
-              id="dest-start"
-              type="date"
-              value={form.startDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, startDate: e.target.value }))
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="dest-end">End date</label>
-            <input
-              id="dest-end"
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-            />
-          </div>
+        <div className="field">
+          <label htmlFor="dest-flag">Flag emoji (optional)</label>
+          <input
+            id="dest-flag"
+            value={form.flag}
+            onChange={(e) => setForm((f) => ({ ...f, flag: e.target.value }))}
+            placeholder="🇮🇹"
+          />
         </div>
         <div className="field">
           <label htmlFor="dest-description">Short description</label>
@@ -156,15 +110,6 @@ export function DestinationForm({
             onChange={(e) =>
               setForm((f) => ({ ...f, description: e.target.value }))
             }
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dest-cover">Cover image (optional)</label>
-          <input
-            id="dest-cover"
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-            onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
           />
         </div>
         {error ? (

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useObjectUrl } from '../hooks/useObjectUrl';
 import type { VacationPhoto } from '../types';
 import { formatDisplayDate } from '../utils/helpers';
-import { downloadBlob } from '../utils/imageProcessing';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './PhotoLightbox.module.css';
 
@@ -12,16 +10,13 @@ interface PhotoLightboxProps {
   onClose: () => void;
   onIndexChange: (index: number) => void;
   onUpdate: (
-    id: string,
+    id: number,
     updates: {
-      caption?: string;
-      dateTaken?: string;
-      location?: string;
-      notes?: string;
-      isFavourite?: boolean;
+      caption?: string | null;
+      dateTaken?: string | null;
     },
   ) => Promise<unknown>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }
 
 export function PhotoLightbox({
@@ -33,14 +28,11 @@ export function PhotoLightbox({
   onDelete,
 }: PhotoLightboxProps) {
   const photo = photos[index];
-  const url = useObjectUrl(photo?.imageBlob);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draft, setDraft] = useState({
     caption: '',
     dateTaken: '',
-    location: '',
-    notes: '',
   });
 
   useEffect(() => {
@@ -48,8 +40,6 @@ export function PhotoLightbox({
     setDraft({
       caption: photo.caption ?? '',
       dateTaken: photo.dateTaken ?? '',
-      location: photo.location ?? '',
-      notes: photo.notes ?? '',
     });
     setEditing(false);
   }, [photo]);
@@ -75,7 +65,12 @@ export function PhotoLightbox({
 
   return (
     <>
-      <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Photo lightbox">
+      <div
+        className={styles.overlay}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Photo lightbox"
+      >
         <div className={styles.topBar}>
           <span>
             {index + 1} / {photos.length}
@@ -84,26 +79,19 @@ export function PhotoLightbox({
             <button
               type="button"
               className="btn btnSecondary"
-              onClick={() =>
-                void onUpdate(photo.id, { isFavourite: !photo.isFavourite })
-              }
-            >
-              {photo.isFavourite ? '♥ Favourited' : '♡ Favourite'}
-            </button>
-            <button
-              type="button"
-              className="btn btnSecondary"
               onClick={() => setEditing((value) => !value)}
             >
               {editing ? 'Close editor' : 'Edit details'}
             </button>
-            <button
-              type="button"
+            <a
               className="btn btnSecondary"
-              onClick={() => downloadBlob(photo.imageBlob, photo.fileName)}
+              href={photo.imageUrl}
+              download
+              target="_blank"
+              rel="noreferrer"
             >
               Download
-            </button>
+            </a>
             <button
               type="button"
               className="btn btnDanger"
@@ -133,9 +121,7 @@ export function PhotoLightbox({
               ‹
             </button>
           ) : null}
-          {url ? (
-            <img src={url} alt={photo.caption || photo.fileName} />
-          ) : null}
+          <img src={photo.imageUrl} alt={photo.caption || `Photo ${photo.id}`} />
           {index < photos.length - 1 ? (
             <button
               type="button"
@@ -150,12 +136,10 @@ export function PhotoLightbox({
 
         <div className={styles.bottomBar}>
           <div className={styles.meta}>
-            <strong>{photo.caption || photo.fileName}</strong>
+            <strong>{photo.caption || `Photo ${photo.id}`}</strong>
             {photo.dateTaken ? (
               <p>Taken {formatDisplayDate(photo.dateTaken)}</p>
             ) : null}
-            {photo.location ? <p>{photo.location}</p> : null}
-            {photo.notes ? <p>{photo.notes}</p> : null}
           </div>
         </div>
 
@@ -167,8 +151,6 @@ export function PhotoLightbox({
               void onUpdate(photo.id, {
                 caption: draft.caption,
                 dateTaken: draft.dateTaken,
-                location: draft.location,
-                notes: draft.notes,
               }).then(() => setEditing(false));
             }}
           >
@@ -191,24 +173,6 @@ export function PhotoLightbox({
                 }
               />
             </label>
-            <label>
-              Location
-              <input
-                value={draft.location}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, location: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Notes
-              <textarea
-                value={draft.notes}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, notes: e.target.value }))
-                }
-              />
-            </label>
             <button type="submit" className="btn btnPrimary">
               Save photo details
             </button>
@@ -219,7 +183,7 @@ export function PhotoLightbox({
       <ConfirmDialog
         open={confirmDelete}
         title="Delete photo?"
-        message="This photo will be permanently removed from this device."
+        message="This photo will be permanently removed from the journal."
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);

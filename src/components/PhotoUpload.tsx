@@ -133,7 +133,7 @@ export function PhotoUpload({ uploading, progress, onUpload }: PhotoUploadProps)
       </div>
 
       <div className={`notice ${styles.notice}`}>
-        Uploaded photos are saved locally on this device.
+        Uploaded photos are saved to your journal cloud storage.
       </div>
 
       {messages.length > 0 ? (

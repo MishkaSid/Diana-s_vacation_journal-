@@ -4,14 +4,14 @@ import {
   isAuthenticated as readAuthFlag,
   logout as clearAuth,
   setAuthenticated,
-  validatePassword,
 } from '../services/auth';
+import { validateCredentials } from '../services/db';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authenticated, setAuthState] = useState(() => readAuthFlag());
 
-  const login = useCallback((password: string) => {
-    const ok = validatePassword(password);
+  const login = useCallback(async (username: string, password: string) => {
+    const ok = await validateCredentials(username, password);
     if (ok) {
       setAuthenticated(true);
       setAuthState(true);

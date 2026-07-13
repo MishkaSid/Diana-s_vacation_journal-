@@ -9,15 +9,13 @@ import { PhotoLightbox } from '../components/PhotoLightbox';
 import { PhotoUpload } from '../components/PhotoUpload';
 import { PLACEHOLDER_COVER } from '../data/initialData';
 import { useDestination } from '../hooks/useDestinations';
-import { useObjectUrl } from '../hooks/useObjectUrl';
 import { usePhotos } from '../hooks/usePhotos';
 import {
   deleteDestination,
-  getPhotoById,
+  getCoverUrlForDestination,
   updateDestination,
 } from '../services/db';
 import type { DestinationInput } from '../types';
-import { formatDateRange } from '../utils/helpers';
 import styles from './DestinationPage.module.css';
 
 interface DestinationPageProps {
@@ -25,17 +23,15 @@ interface DestinationPageProps {
 }
 
 export function DestinationPage({ onLogout }: DestinationPageProps) {
-  const { slug } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { destination, loading, error, refresh, setDestination } =
-    useDestination(slug);
+    useDestination(id);
   const {
     photos,
     visiblePhotos,
     loading: photosLoading,
     error: photosError,
-    filter,
-    setFilter,
     sort,
     setSort,
     search,
@@ -48,29 +44,28 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
     refresh: refreshPhotos,
   } = usePhotos(destination?.id);
 
-  const [coverBlob, setCoverBlob] = useState<Blob | null>(null);
-  const coverUrl = useObjectUrl(coverBlob);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadCover() {
-      if (!destination?.coverPhotoId) {
-        setCoverBlob(null);
-        return;
-      }
-      const photo = await getPhotoById(destination.coverPhotoId);
-      if (!cancelled) {
-        setCoverBlob(photo?.imageBlob ?? null);
-      }
+    if (!destination) {
+      setCoverUrl(null);
+      return;
     }
-    void loadCover();
+    let cancelled = false;
+    void getCoverUrlForDestination(destination.id)
+      .then((url) => {
+        if (!cancelled) setCoverUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setCoverUrl(null);
+      });
     return () => {
       cancelled = true;
     };
-  }, [destination?.coverPhotoId]);
+  }, [destination, photos.length]);
 
   const handleEdit = async (input: DestinationInput) => {
     if (!destination) return;
@@ -85,13 +80,6 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
     await deleteDestination(destination.id);
     navigate('/', { replace: true });
   };
-
-  const imageSrc =
-    coverUrl || destination?.coverPublicPath || PLACEHOLDER_COVER;
-  const dateLabel = formatDateRange(
-    destination?.startDate,
-    destination?.endDate,
-  );
 
   return (
     <div className="app-shell">
@@ -124,7 +112,7 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
             <section className={styles.hero}>
               <div className={styles.cover}>
                 <img
-                  src={imageSrc}
+                  src={coverUrl || PLACEHOLDER_COVER}
                   alt={`${destination.name} cover`}
                 />
               </div>
@@ -137,10 +125,6 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
                   ) : null}
                   <h1>{destination.name}</h1>
                 </div>
-                {destination.tripTitle ? (
-                  <p className={styles.tripTitle}>{destination.tripTitle}</p>
-                ) : null}
-                {dateLabel ? <p className={styles.meta}>{dateLabel}</p> : null}
                 <p className={styles.meta}>
                   {photos.length === 1 ? '1 photo' : `${photos.length} photos`}
                   {visiblePhotos.length !== photos.length
@@ -177,10 +161,8 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
               />
 
               <GalleryControls
-                filter={filter}
                 sort={sort}
                 search={search}
-                onFilterChange={setFilter}
                 onSortChange={setSort}
                 onSearchChange={setSearch}
               />
@@ -217,7 +199,7 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
       <ConfirmDialog
         open={confirmDelete}
         title="Delete destination?"
-        message="This will permanently delete the destination and all of its photos from this device."
+        message="This will permanently delete the destination and all of its photos."
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);
@@ -232,11 +214,9 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
           onClose={() => setLightboxIndex(null)}
           onIndexChange={setLightboxIndex}
           onUpdate={updateMeta}
-          onDelete={async (id) => {
-            await remove(id);
-            if (destination?.coverPhotoId === id) {
-              await refresh();
-            }
+          onDelete={async (photoId) => {
+            await remove(photoId);
+            await refresh();
           }}
         />
       ) : null}

@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { useObjectUrl } from '../hooks/useObjectUrl';
 import type { VacationPhoto } from '../types';
 import styles from './PhotoGallery.module.css';
 
@@ -10,25 +8,18 @@ function GalleryItem({
   photo: VacationPhoto;
   onOpen: () => void;
 }) {
-  const url = useObjectUrl(photo.imageBlob);
-
   return (
     <button
       type="button"
       className={styles.item}
       onClick={onOpen}
-      aria-label={photo.caption || `Open photo ${photo.fileName}`}
+      aria-label={photo.caption || `Open photo ${photo.id}`}
     >
-      {url ? (
-        <img src={url} alt={photo.caption || photo.fileName} loading="lazy" />
-      ) : (
-        <div style={{ aspectRatio: '4/3', background: 'var(--beige)' }} />
-      )}
-      {photo.isFavourite ? (
-        <span className={styles.heart} aria-hidden="true">
-          ♥
-        </span>
-      ) : null}
+      <img
+        src={photo.imageUrl}
+        alt={photo.caption || `Photo ${photo.id}`}
+        loading="lazy"
+      />
       {photo.caption ? <div className={styles.caption}>{photo.caption}</div> : null}
     </button>
   );
@@ -40,13 +31,6 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({ photos, onOpen }: PhotoGalleryProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return <div className="loadingState">Preparing gallery…</div>;
-  }
-
   if (photos.length === 0) {
     return (
       <div className="emptyState cardSurface">
