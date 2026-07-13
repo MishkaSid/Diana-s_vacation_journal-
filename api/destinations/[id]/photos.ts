@@ -18,7 +18,7 @@ export default async function handler(
     return;
   }
 
-  const destinationId = parseId(req.query.destinationId);
+  const destinationId = parseId(req.query.id);
   if (!destinationId) {
     res.status(400).json({ error: 'Invalid destination id' });
     return;

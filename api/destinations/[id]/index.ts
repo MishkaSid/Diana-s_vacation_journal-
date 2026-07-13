@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../_lib/auth';
+import { requireAuth } from '../../../_lib/auth';
 import {
   methodNotAllowed,
   parseId,
   readJsonBody,
   serverError,
-} from '../../_lib/http';
-import { getSupabaseAdmin, PHOTOS_BUCKET } from '../../_lib/supabaseAdmin';
+} from '../../../_lib/http';
+import { getSupabaseAdmin, PHOTOS_BUCKET } from '../../../_lib/supabaseAdmin';
 
 interface UpdateBody {
   name?: string;
