@@ -56,6 +56,8 @@ Filtering always uses `destination_id` in the database, never folder names alone
 
 ## Environment variables
 
+Set these in the Vercel project settings for **Production** and **Preview**:
+
 ### Frontend
 
 ```env
@@ -63,7 +65,7 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
 
-### Server (Vercel / `vercel dev`)
+### Server (required for `/api/*`)
 
 ```env
 SUPABASE_URL=
@@ -74,6 +76,8 @@ SESSION_SECRET=
 `SESSION_SECRET` must be a long random string.
 
 **Never** expose `SUPABASE_SERVICE_ROLE_KEY` through any `VITE_` variable.
+
+If `SUPABASE_SERVICE_ROLE_KEY` or `SESSION_SECRET` is missing on Vercel, API routes return a configuration error (or crash before this fix). After deploying, open **Vercel → Project → Settings → Environment Variables** and confirm all three server variables are present, then redeploy.
 
 ## Hash the journal password
 

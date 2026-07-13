@@ -9,7 +9,9 @@ export function methodNotAllowed(
 }
 
 export function serverError(res: VercelResponse, fallback: string): void {
-  res.status(500).json({ error: fallback });
+  if (!res.headersSent) {
+    res.status(500).json({ error: fallback });
+  }
 }
 
 export async function readJsonBody<T>(
@@ -47,4 +49,27 @@ export function extensionForMime(mimeType: string): string {
     default:
       return 'jpg';
   }
+}
+
+type ApiHandler = (
+  req: VercelRequest,
+  res: VercelResponse,
+) => void | Promise<void>;
+
+/** Catch unexpected throws so Vercel returns JSON instead of crashing. */
+export function withErrorHandling(handler: ApiHandler): ApiHandler {
+  return async (req, res) => {
+    try {
+      await handler(req, res);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.includes('Missing SUPABASE')
+          ? 'Server configuration error'
+          : error instanceof Error && error.message.includes('SESSION_SECRET')
+            ? 'Server configuration error'
+            : 'Internal server error';
+      console.error('[api]', error);
+      serverError(res, message);
+    }
+  };
 }

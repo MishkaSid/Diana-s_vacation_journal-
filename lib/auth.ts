@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const SESSION_COOKIE = 'dj_session';
@@ -9,10 +9,10 @@ interface SessionPayload {
   exp: number;
 }
 
-function getSessionSecret(): string {
+function getSessionSecret(): string | null {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 16) {
-    throw new Error('SESSION_SECRET is missing or too short');
+    return null;
   }
   return secret;
 }
@@ -25,32 +25,41 @@ function decodePart(value: string): string {
   return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function sign(body: string): string {
-  return createHmac('sha256', getSessionSecret()).update(body).digest('base64url');
+function sign(body: string, secret: string): string {
+  return createHmac('sha256', secret).update(body).digest('base64url');
 }
 
 export function createSessionToken(): string {
+  const secret = getSessionSecret();
+  if (!secret) {
+    throw new Error('SESSION_SECRET is missing or too short');
+  }
+
   const payload: SessionPayload = {
     sub: 'journal',
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
   };
   const body = encodePart(JSON.stringify(payload));
-  return `${body}.${sign(body)}`;
+  return `${body}.${sign(body, secret)}`;
 }
 
 export function verifySessionToken(token: string | undefined): boolean {
   if (!token) return false;
+
+  const secret = getSessionSecret();
+  if (!secret) return false;
+
   const [body, signature] = token.split('.');
   if (!body || !signature) return false;
 
-  const expected = sign(body);
-  const left = Buffer.from(signature);
-  const right = Buffer.from(expected);
-  if (left.length !== right.length || !timingSafeEqual(left, right)) {
-    return false;
-  }
-
   try {
+    const expected = sign(body, secret);
+    const left = Buffer.from(signature);
+    const right = Buffer.from(expected);
+    if (left.length !== right.length || !timingSafeEqual(left, right)) {
+      return false;
+    }
+
     const payload = JSON.parse(decodePart(body)) as SessionPayload;
     if (payload.sub !== 'journal') return false;
     if (typeof payload.exp !== 'number') return false;
@@ -78,7 +87,11 @@ export function readCookie(
 }
 
 export function isAuthenticated(req: VercelRequest): boolean {
-  return verifySessionToken(readCookie(req, SESSION_COOKIE));
+  try {
+    return verifySessionToken(readCookie(req, SESSION_COOKIE));
+  } catch {
+    return false;
+  }
 }
 
 export function requireAuth(
@@ -90,8 +103,11 @@ export function requireAuth(
   return false;
 }
 
+function isSecureCookie(): boolean {
+  return process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+}
+
 export function buildSessionCookie(token: string): string {
-  const secure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
   const parts = [
     `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
     'Path=/',
@@ -99,12 +115,11 @@ export function buildSessionCookie(token: string): string {
     'SameSite=Lax',
     `Max-Age=${SESSION_TTL_SECONDS}`,
   ];
-  if (secure) parts.push('Secure');
+  if (isSecureCookie()) parts.push('Secure');
   return parts.join('; ');
 }
 
 export function buildClearedSessionCookie(): string {
-  const secure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
   const parts = [
     `${SESSION_COOKIE}=`,
     'Path=/',
@@ -112,6 +127,6 @@ export function buildClearedSessionCookie(): string {
     'SameSite=Lax',
     'Max-Age=0',
   ];
-  if (secure) parts.push('Secure');
+  if (isSecureCookie()) parts.push('Secure');
   return parts.join('; ');
 }

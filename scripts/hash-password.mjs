@@ -48,7 +48,7 @@ if (!source || typeof source !== 'string') {
   process.exit(1);
 }
 
-const hash = await bcrypt.hash(source, 12);
+const hash = bcrypt.hashSync(source, 12);
 
 const { error: updateError } = await supabase
   .from('app_settings')
