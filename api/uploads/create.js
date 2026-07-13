@@ -1,27 +1,20 @@
-import { randomUUID } from 'crypto';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../lib/auth';
-import {
+const { randomUUID } = require('crypto');
+const { requireAuth } = require('../../lib/auth');
+const {
   extensionForMime,
   methodNotAllowed,
   readJsonBody,
   serverError,
   withErrorHandling,
-} from '../../lib/http';
-import {
+} = require('../../lib/http');
+const {
   ALLOWED_MIME_TYPES,
   getSupabaseAdmin,
   MAX_UPLOAD_BYTES,
   PHOTOS_BUCKET,
-} from '../../lib/supabaseAdmin';
+} = require('../../lib/supabaseAdmin');
 
-interface CreateUploadBody {
-  destinationId?: number;
-  fileName?: string;
-  mimeType?: string;
-}
-
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   if (req.method !== 'POST') {
@@ -29,7 +22,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const body = await readJsonBody<CreateUploadBody>(req);
+  const body = await readJsonBody(req);
   const destinationId = Number(body?.destinationId);
   const mimeType = body?.mimeType?.trim() ?? '';
   const fileName = body?.fileName?.trim() ?? 'photo';
@@ -81,4 +74,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   });
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);

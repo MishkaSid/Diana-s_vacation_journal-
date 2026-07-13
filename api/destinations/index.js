@@ -1,20 +1,13 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../lib/auth';
-import {
+const { requireAuth } = require('../../lib/auth');
+const {
   methodNotAllowed,
   readJsonBody,
   serverError,
   withErrorHandling,
-} from '../../lib/http';
-import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+} = require('../../lib/http');
+const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 
-interface CreateBody {
-  name?: string;
-  flag?: string | null;
-  description?: string | null;
-}
-
-async function ensureItalySeed(): Promise<void> {
+async function ensureItalySeed() {
   const supabase = getSupabaseAdmin();
   const { count, error } = await supabase
     .from('destinations')
@@ -32,7 +25,7 @@ async function ensureItalySeed(): Promise<void> {
   if (insertError) throw insertError;
 }
 
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   const supabase = getSupabaseAdmin();
@@ -54,7 +47,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
-    const body = await readJsonBody<CreateBody>(req);
+    const body = await readJsonBody(req);
     const name = body?.name?.trim() ?? '';
     if (!name) {
       res.status(400).json({ error: 'Destination name is required' });
@@ -83,4 +76,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   methodNotAllowed(res, ['GET', 'POST']);
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);

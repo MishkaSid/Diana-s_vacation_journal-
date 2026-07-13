@@ -1,29 +1,23 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { compare } from 'bcryptjs';
-import {
+const bcrypt = require('bcryptjs');
+const {
   buildSessionCookie,
   createSessionToken,
-} from '../lib/auth';
-import {
+} = require('../lib/auth');
+const {
   methodNotAllowed,
   readJsonBody,
   serverError,
   withErrorHandling,
-} from '../lib/http';
-import { getSupabaseAdmin } from '../lib/supabaseAdmin';
+} = require('../lib/http');
+const { getSupabaseAdmin } = require('../lib/supabaseAdmin');
 
-interface LoginBody {
-  username?: string;
-  password?: string;
-}
-
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     methodNotAllowed(res, ['POST']);
     return;
   }
 
-  const body = await readJsonBody<LoginBody>(req);
+  const body = await readJsonBody(req);
   const username = body?.username?.trim() ?? '';
   const password = body?.password ?? '';
 
@@ -56,7 +50,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const passwordMatches = await compare(password, data.password);
+  const passwordMatches = bcrypt.compareSync(password, data.password);
 
   if (!usernameMatches || !passwordMatches) {
     res.status(401).json({ error: 'Invalid username or password' });
@@ -68,4 +62,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   res.status(200).json({ ok: true });
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);

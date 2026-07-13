@@ -1,25 +1,17 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../lib/auth';
-import {
+const { requireAuth } = require('../../lib/auth');
+const {
   methodNotAllowed,
   readJsonBody,
   serverError,
   withErrorHandling,
-} from '../../lib/http';
-import {
+} = require('../../lib/http');
+const {
   getSupabaseAdmin,
   PHOTOS_BUCKET,
   SIGNED_URL_EXPIRES_IN,
-} from '../../lib/supabaseAdmin';
+} = require('../../lib/supabaseAdmin');
 
-interface CreatePhotoBody {
-  destination_id?: number;
-  image_path?: string;
-  caption?: string | null;
-  date_taken?: string | null;
-}
-
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   if (req.method !== 'POST') {
@@ -27,7 +19,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const body = await readJsonBody<CreatePhotoBody>(req);
+  const body = await readJsonBody(req);
   const destinationId = Number(body?.destination_id);
   const imagePath = body?.image_path?.trim() ?? '';
 
@@ -82,4 +74,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   });
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);

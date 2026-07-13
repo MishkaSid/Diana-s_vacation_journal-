@@ -1,18 +1,17 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../../lib/auth';
-import {
+const { requireAuth } = require('../../../lib/auth');
+const {
   methodNotAllowed,
   parseId,
   serverError,
   withErrorHandling,
-} from '../../../lib/http';
-import {
+} = require('../../../lib/http');
+const {
   getSupabaseAdmin,
   PHOTOS_BUCKET,
   SIGNED_URL_EXPIRES_IN,
-} from '../../../lib/supabaseAdmin';
+} = require('../../../lib/supabaseAdmin');
 
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   if (req.method !== 'GET') {
@@ -70,4 +69,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   res.status(200).json({ photos });
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);

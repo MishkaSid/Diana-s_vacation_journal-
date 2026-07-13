@@ -1,20 +1,14 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from '../../../lib/auth';
-import {
+const { requireAuth } = require('../../../lib/auth');
+const {
   methodNotAllowed,
   parseId,
   readJsonBody,
   serverError,
   withErrorHandling,
-} from '../../../lib/http';
-import { getSupabaseAdmin, PHOTOS_BUCKET } from '../../../lib/supabaseAdmin';
+} = require('../../../lib/http');
+const { getSupabaseAdmin, PHOTOS_BUCKET } = require('../../../lib/supabaseAdmin');
 
-interface UpdateBody {
-  caption?: string | null;
-  date_taken?: string | null;
-}
-
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   const id = parseId(req.query.id);
@@ -26,12 +20,12 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseAdmin();
 
   if (req.method === 'PATCH') {
-    const body = await readJsonBody<UpdateBody>(req);
-    const payload: Record<string, string | null> = {};
-    if (body && 'caption' in body) {
+    const body = await readJsonBody(req);
+    const payload = {};
+    if (body && Object.prototype.hasOwnProperty.call(body, 'caption')) {
       payload.caption = body.caption?.trim() || null;
     }
-    if (body && 'date_taken' in body) {
+    if (body && Object.prototype.hasOwnProperty.call(body, 'date_taken')) {
       payload.date_taken = body.date_taken || null;
     }
 
@@ -97,4 +91,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   methodNotAllowed(res, ['PATCH', 'DELETE']);
 }
 
-export default withErrorHandling(handler);
+module.exports = withErrorHandling(handler);
