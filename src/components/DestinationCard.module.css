@@ -9,8 +9,8 @@
   color: inherit;
   border: none;
   padding: 0;
-  background: rgba(255, 252, 248, 0.82);
-  border: 1px solid rgba(58, 50, 44, 0.08);
+  background: rgba(255, 251, 255, 0.88);
+  border: 1px solid rgba(232, 145, 168, 0.16);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   cursor: pointer;

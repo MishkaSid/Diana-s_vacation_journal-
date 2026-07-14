@@ -1,21 +1,23 @@
 :root {
-  --cream: #f7f1e8;
-  --cream-deep: #efe6d8;
-  --beige: #e4d5c2;
-  --beige-soft: #f3ebe0;
-  --terracotta: #c46a4a;
-  --terracotta-deep: #a85336;
-  --terracotta-soft: #d9896d;
-  --olive: #6f7a55;
-  --olive-soft: #8a9470;
-  --ink: #3a322c;
-  --ink-muted: #6b5f55;
-  --ink-faint: #9a8d82;
-  --white: #fffcf8;
-  --shadow: 0 10px 30px rgba(58, 50, 44, 0.08);
-  --shadow-strong: 0 18px 40px rgba(58, 50, 44, 0.14);
-  --radius: 18px;
-  --radius-sm: 12px;
+  --cream: #fff7f9;
+  --cream-deep: #fceef3;
+  --beige: #f3dfe6;
+  --beige-soft: #fff4f7;
+  --terracotta: #e891a8;
+  --terracotta-deep: #d97893;
+  --terracotta-soft: #f2b4c3;
+  --olive: #c48aa5;
+  --olive-soft: #d9a8bc;
+  --ink: #5a3f4a;
+  --ink-muted: #8a6a76;
+  --ink-faint: #b99aaa;
+  --white: #fffbff;
+  --blush: #ffd6e2;
+  --lilac: #e9d5f2;
+  --shadow: 0 12px 32px rgba(196, 128, 150, 0.12);
+  --shadow-strong: 0 20px 44px rgba(184, 110, 140, 0.16);
+  --radius: 20px;
+  --radius-sm: 14px;
   --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --font-sans: 'Source Sans 3', 'Segoe UI', Tahoma, sans-serif;
   --transition: 220ms ease;
@@ -38,9 +40,10 @@ body {
   font-family: var(--font-sans);
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(196, 106, 74, 0.08), transparent 28%),
-    radial-gradient(circle at top right, rgba(111, 122, 85, 0.1), transparent 30%),
-    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%);
+    radial-gradient(circle at top left, rgba(255, 182, 206, 0.28), transparent 32%),
+    radial-gradient(circle at top right, rgba(224, 190, 245, 0.24), transparent 34%),
+    radial-gradient(circle at bottom center, rgba(255, 214, 226, 0.2), transparent 40%),
+    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 55%, #f6e8f3 100%);
   background-attachment: fixed;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -186,24 +189,24 @@ img {
 }
 
 .btnPrimary {
-  background: var(--terracotta);
+  background: linear-gradient(135deg, #f0a0b4 0%, #e891a8 55%, #d97893 100%);
   color: var(--white);
-  box-shadow: 0 8px 18px rgba(196, 106, 74, 0.28);
+  box-shadow: 0 10px 22px rgba(232, 145, 168, 0.35);
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: var(--terracotta-deep);
+  background: linear-gradient(135deg, #eba3b8 0%, #d97893 100%);
 }
 
 .btnSecondary {
-  background: rgba(255, 252, 248, 0.8);
+  background: rgba(255, 251, 255, 0.88);
   color: var(--ink);
-  border: 1px solid rgba(58, 50, 44, 0.12);
+  border: 1px solid rgba(232, 145, 168, 0.22);
 }
 
 .btnSecondary:hover:not(:disabled) {
-  border-color: var(--olive-soft);
-  background: var(--white);
+  border-color: var(--terracotta-soft);
+  background: #fff8fb;
 }
 
 .btnGhost {
@@ -214,16 +217,16 @@ img {
 
 .btnGhost:hover:not(:disabled) {
   color: var(--ink);
-  background: rgba(255, 252, 248, 0.55);
+  background: rgba(255, 240, 246, 0.7);
 }
 
 .btnDanger {
-  background: #9c3f3f;
+  background: #d9778f;
   color: white;
 }
 
 .btnDanger:hover:not(:disabled) {
-  background: #823333;
+  background: #c45f79;
 }
 
 .btnIcon {
@@ -231,8 +234,8 @@ img {
   height: 2.5rem;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(58, 50, 44, 0.12);
-  background: rgba(255, 252, 248, 0.85);
+  border: 1px solid rgba(232, 145, 168, 0.2);
+  background: rgba(255, 251, 255, 0.9);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -254,9 +257,9 @@ img {
 .field textarea,
 .field select {
   width: 100%;
-  border: 1px solid rgba(58, 50, 44, 0.14);
-  background: rgba(255, 252, 248, 0.9);
-  border-radius: 12px;
+  border: 1px solid rgba(232, 145, 168, 0.28);
+  background: rgba(255, 251, 255, 0.92);
+  border-radius: 14px;
   padding: 0.75rem 0.9rem;
   transition:
     border-color var(--transition),
@@ -268,7 +271,7 @@ img {
 .field select:focus {
   outline: none;
   border-color: var(--terracotta-soft);
-  box-shadow: 0 0 0 3px rgba(196, 106, 74, 0.15);
+  box-shadow: 0 0 0 3px rgba(232, 145, 168, 0.18);
 }
 
 .field textarea {
@@ -293,11 +296,11 @@ img {
 }
 
 .cardSurface {
-  background: rgba(255, 252, 248, 0.78);
-  border: 1px solid rgba(58, 50, 44, 0.08);
+  background: rgba(255, 251, 255, 0.82);
+  border: 1px solid rgba(232, 145, 168, 0.16);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
 .emptyState,
@@ -312,7 +315,7 @@ img {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 3px solid rgba(196, 106, 74, 0.2);
+  border: 3px solid rgba(232, 145, 168, 0.22);
   border-top-color: var(--terracotta);
   animation: spin 0.8s linear infinite;
   margin: 0 auto 1rem;
@@ -324,8 +327,8 @@ img {
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: rgba(111, 122, 85, 0.12);
-  color: var(--olive);
+  background: rgba(232, 145, 168, 0.16);
+  color: #b86a84;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -335,8 +338,8 @@ img {
   align-items: flex-start;
   gap: 0.55rem;
   padding: 0.75rem 0.95rem;
-  border-radius: 12px;
-  background: rgba(111, 122, 85, 0.1);
-  color: var(--olive);
+  border-radius: 14px;
+  background: rgba(255, 214, 226, 0.45);
+  color: #a8667d;
   font-size: 0.92rem;
 }

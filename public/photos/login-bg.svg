@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Soft blush travel background">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde8ef"/>
+      <stop offset="40%" stop-color="#f8ebe3"/>
+      <stop offset="100%" stop-color="#e8d5f0"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0b8c8"/>
+      <stop offset="100%" stop-color="#e8a0b5"/>
+    </linearGradient>
+    <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4b8c9"/>
+      <stop offset="100%" stop-color="#c9a3b8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="70%" cy="28%" r="35%">
+      <stop offset="0%" stop-color="#fff6f8" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#fff6f8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#glow)"/>
+  <circle cx="1180" cy="220" r="90" fill="#f7c9d4" opacity="0.55"/>
+  <circle cx="1120" cy="260" r="48" fill="#fff0f4" opacity="0.5"/>
+  <path d="M0 640 C280 540 420 700 680 620 C920 540 1100 700 1380 610 C1500 560 1560 600 1600 580 L1600 1000 L0 1000 Z" fill="url(#hill2)" opacity="0.55"/>
+  <path d="M0 760 C260 680 480 820 760 730 C1040 640 1240 800 1600 720 L1600 1000 L0 1000 Z" fill="url(#hill)" opacity="0.7"/>
+  <!-- soft flower accents -->
+  <g opacity="0.45">
+    <circle cx="240" cy="780" r="18" fill="#fff5f8"/>
+    <circle cx="220" cy="768" r="14" fill="#f8c2d0"/>
+    <circle cx="258" cy="768" r="14" fill="#f8c2d0"/>
+    <circle cx="228" cy="798" r="14" fill="#f3a9bc"/>
+    <circle cx="252" cy="798" r="14" fill="#f3a9bc"/>
+    <circle cx="240" cy="782" r="8" fill="#f0d48a"/>
+  </g>
+  <g opacity="0.4">
+    <circle cx="1320" cy="820" r="22" fill="#fff5f8"/>
+    <circle cx="1296" cy="804" r="16" fill="#e8b4d0"/>
+    <circle cx="1344" cy="804" r="16" fill="#e8b4d0"/>
+    <circle cx="1304" cy="840" r="16" fill="#d9a0c0"/>
+    <circle cx="1336" cy="840" r="16" fill="#d9a0c0"/>
+    <circle cx="1320" cy="822" r="9" fill="#f0d48a"/>
+  </g>
+  <text x="800" y="470" text-anchor="middle" fill="#8a6274" font-family="Georgia, serif" font-size="42" opacity="0.35" letter-spacing="4">Memories</text>
+</svg>
