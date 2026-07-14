@@ -79,7 +79,19 @@ SESSION_SECRET=
 
 If `SUPABASE_SERVICE_ROLE_KEY` or `SESSION_SECRET` is missing on Vercel, API routes return a configuration error (or crash before this fix). After deploying, open **Vercel → Project → Settings → Environment Variables** and confirm all three server variables are present, then redeploy.
 
-## Hash the journal password
+## Destination banners
+
+Run this SQL in Supabase to enable banner/cover images on destinations:
+
+```sql
+ALTER TABLE public.destinations
+ADD COLUMN IF NOT EXISTS cover_image_path text;
+```
+
+File: `supabase/migrations/003_destination_cover.sql`
+
+Also create a **private** Storage bucket named `vacation-photos` if it does not already exist.
+
 
 The login API rejects plaintext passwords. Convert the current `app_settings.password` value to bcrypt:
 

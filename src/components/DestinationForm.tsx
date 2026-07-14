@@ -23,6 +23,9 @@ export function DestinationForm({
   onSubmit,
 }: DestinationFormProps) {
   const [form, setForm] = useState(emptyForm);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [clearCover, setClearCover] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,11 +37,22 @@ export function DestinationForm({
         flag: initial.flag ?? '',
         description: initial.description ?? '',
       });
+      setPreviewUrl(initial.cover_signed_url ?? null);
     } else {
       setForm(emptyForm);
+      setPreviewUrl(null);
     }
+    setCoverFile(null);
+    setClearCover(false);
     setError(null);
   }, [open, initial]);
+
+  useEffect(() => {
+    if (!coverFile) return;
+    const url = URL.createObjectURL(coverFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -53,6 +67,8 @@ export function DestinationForm({
         name: form.name,
         flag: form.flag,
         description: form.description,
+        coverFile,
+        clearCover: clearCover && !coverFile,
       });
       onClose();
     } catch (err) {
@@ -111,6 +127,45 @@ export function DestinationForm({
               setForm((f) => ({ ...f, description: e.target.value }))
             }
           />
+        </div>
+        <div className="field">
+          <label htmlFor="dest-banner">Banner / cover image (optional)</label>
+          <input
+            id="dest-banner"
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            onChange={(e) => {
+              setCoverFile(e.target.files?.[0] ?? null);
+              setClearCover(false);
+            }}
+          />
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Destination banner preview"
+              style={{
+                width: '100%',
+                maxHeight: 180,
+                objectFit: 'cover',
+                borderRadius: 12,
+                marginTop: '0.5rem',
+              }}
+            />
+          ) : null}
+          {initial?.cover_image_path || previewUrl ? (
+            <button
+              type="button"
+              className="btn btnGhost"
+              style={{ alignSelf: 'start', marginTop: '0.35rem' }}
+              onClick={() => {
+                setCoverFile(null);
+                setClearCover(true);
+                setPreviewUrl(null);
+              }}
+            >
+              Remove banner
+            </button>
+          ) : null}
         </div>
         {error ? (
           <p role="alert" style={{ color: '#9c3f3f', margin: 0 }}>

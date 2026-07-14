@@ -3,6 +3,8 @@ export interface Destination {
   name: string;
   flag: string | null;
   description: string | null;
+  cover_image_path?: string | null;
+  cover_signed_url?: string | null;
   created_at: string;
 }
 
@@ -27,6 +29,8 @@ export interface DestinationInput {
   name: string;
   flag?: string;
   description?: string;
+  coverFile?: File | null;
+  clearCover?: boolean;
 }
 
 export interface ApiErrorBody {

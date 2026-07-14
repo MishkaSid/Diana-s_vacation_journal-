@@ -2,6 +2,7 @@ import {
   ACCEPTED_IMAGE_TYPES,
   LARGE_FILE_WARNING_BYTES,
   MAX_IMAGE_DIMENSION,
+  MAX_UPLOAD_BYTES,
 } from '../data/initialData';
 
 export function isAcceptedImageFile(file: File): boolean {
@@ -84,12 +85,32 @@ export interface ProcessedImage {
 
 export async function processImageFile(file: File): Promise<ProcessedImage> {
   const img = await loadImageFromFile(file);
+  // Prefer JPEG for uploads to keep payload under Vercel body limits.
   const outputType =
     file.type === 'image/png' || file.type === 'image/webp'
-      ? file.type
-      : 'image/jpeg';
-  const quality = outputType === 'image/png' ? 0.92 : 0.85;
-  const canvas = drawResized(img, MAX_IMAGE_DIMENSION);
-  const imageBlob = await canvasToBlob(canvas, outputType, quality);
+      ? 'image/jpeg'
+      : file.type === 'image/jpeg'
+        ? 'image/jpeg'
+        : 'image/jpeg';
+
+  let quality = 0.82;
+  let maxDimension = MAX_IMAGE_DIMENSION;
+  let imageBlob = await canvasToBlob(drawResized(img, maxDimension), outputType, quality);
+
+  while (imageBlob.size > MAX_UPLOAD_BYTES && (quality > 0.55 || maxDimension > 1280)) {
+    if (quality > 0.55) quality -= 0.08;
+    else maxDimension = Math.max(1280, Math.round(maxDimension * 0.85));
+    imageBlob = await canvasToBlob(drawResized(img, maxDimension), outputType, quality);
+  }
+
   return { imageBlob, mimeType: outputType, fileName: file.name };
+}
+
+export async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Failed to read image data'));
+    reader.readAsDataURL(blob);
+  });
 }

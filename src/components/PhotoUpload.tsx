@@ -76,9 +76,15 @@ export function PhotoUpload({ uploading, progress, onUpload }: PhotoUploadProps)
   const handleSave = async () => {
     if (pending.length === 0) return;
     const files = pending.map((item) => item.file);
-    await onUpload(files);
-    clearPending();
-    setMessages([]);
+    try {
+      await onUpload(files);
+      clearPending();
+      setMessages([]);
+    } catch (err) {
+      setMessages([
+        err instanceof Error ? err.message : 'Unable to save photos. Please try again.',
+      ]);
+    }
   };
 
   return (

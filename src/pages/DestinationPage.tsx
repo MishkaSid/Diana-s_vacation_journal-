@@ -45,13 +45,14 @@ export function DestinationPage({ onLogout }: DestinationPageProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const coverUrl = useMemo(() => {
+    if (destination?.cover_signed_url) return destination.cover_signed_url;
     if (photos.length === 0) return PLACEHOLDER_COVER;
     const earliest = [...photos].sort(
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     )[0];
     return earliest?.signed_url || PLACEHOLDER_COVER;
-  }, [photos]);
+  }, [destination?.cover_signed_url, photos]);
 
   const handleEdit = async (input: DestinationInput) => {
     if (!destination) return;

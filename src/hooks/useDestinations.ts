@@ -26,9 +26,12 @@ export function useDestinations() {
       const covers: Record<number, string> = {};
       await Promise.all(
         list.map(async (destination) => {
+          if (destination.cover_signed_url) {
+            covers[destination.id] = destination.cover_signed_url;
+          }
           const photos = await listPhotos(destination.id);
           counts[destination.id] = photos.length;
-          if (photos.length > 0) {
+          if (!covers[destination.id] && photos.length > 0) {
             const earliest = [...photos].sort(
               (a, b) =>
                 new Date(a.created_at).getTime() -

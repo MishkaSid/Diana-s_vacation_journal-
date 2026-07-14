@@ -1,6 +1,6 @@
 import { apiFetch } from './api';
 import type { Destination, DestinationInput, Photo, PhotoMetadataUpdate } from '../types';
-import { processImageFile } from '../utils/imageProcessing';
+import { blobToBase64, processImageFile } from '../utils/imageProcessing';
 import { MAX_UPLOAD_BYTES } from '../data/initialData';
 
 export async function fetchSession(): Promise<boolean> {
@@ -29,6 +29,30 @@ export async function listDestinations(): Promise<Destination[]> {
   return data.destinations;
 }
 
+async function buildDestinationPayload(input: DestinationInput) {
+  const payload: Record<string, unknown> = {
+    name: input.name,
+    flag: input.flag ?? null,
+    description: input.description ?? null,
+  };
+
+  if (input.clearCover) {
+    payload.clearCover = true;
+  }
+
+  if (input.coverFile) {
+    const processed = await processImageFile(input.coverFile);
+    if (processed.imageBlob.size > MAX_UPLOAD_BYTES) {
+      throw new Error('Cover image is too large after compression.');
+    }
+    payload.coverImageBase64 = await blobToBase64(processed.imageBlob);
+    payload.coverMimeType = processed.mimeType;
+    payload.coverFileName = processed.fileName;
+  }
+
+  return payload;
+}
+
 export async function createDestination(
   input: DestinationInput,
 ): Promise<Destination> {
@@ -36,11 +60,7 @@ export async function createDestination(
     '/api/destinations',
     {
       method: 'POST',
-      body: JSON.stringify({
-        name: input.name,
-        flag: input.flag ?? null,
-        description: input.description ?? null,
-      }),
+      body: JSON.stringify(await buildDestinationPayload(input)),
     },
   );
   return data.destination;
@@ -54,11 +74,7 @@ export async function updateDestination(
     `/api/destinations/${id}`,
     {
       method: 'PATCH',
-      body: JSON.stringify({
-        name: input.name,
-        flag: input.flag ?? null,
-        description: input.description ?? null,
-      }),
+      body: JSON.stringify(await buildDestinationPayload(input)),
     },
   );
   return data.destination;
@@ -90,13 +106,6 @@ export async function deletePhoto(id: number): Promise<void> {
   await apiFetch(`/api/photos/${id}`, { method: 'DELETE' });
 }
 
-interface SignedUpload {
-  path: string;
-  token: string;
-  signedUrl: string;
-  maxBytes: number;
-}
-
 export async function uploadPhotosForDestination(
   destinationId: number,
   files: File[],
@@ -111,44 +120,18 @@ export async function uploadPhotosForDestination(
       throw new Error(`${file.name} is too large after compression.`);
     }
 
-    const upload = await apiFetch<SignedUpload>('/api/uploads/create', {
+    const imageBase64 = await blobToBase64(processed.imageBlob);
+    const data = await apiFetch<{ photo: Photo }>('/api/photos/upload', {
       method: 'POST',
       body: JSON.stringify({
         destinationId,
         fileName: processed.fileName,
         mimeType: processed.mimeType,
+        imageBase64,
       }),
     });
 
-    const putResponse = await fetch(upload.signedUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': processed.mimeType,
-      },
-      body: processed.imageBlob,
-    });
-
-    if (!putResponse.ok) {
-      throw new Error(`Unable to upload ${file.name}`);
-    }
-
-    try {
-      const data = await apiFetch<{ photo: Photo }>('/api/photos', {
-        method: 'POST',
-        body: JSON.stringify({
-          destination_id: destinationId,
-          image_path: upload.path,
-          caption: null,
-          date_taken: null,
-        }),
-      });
-      created.push(data.photo);
-    } catch (error) {
-      throw error instanceof Error
-        ? error
-        : new Error('Unable to save photo metadata');
-    }
-
+    created.push(data.photo);
     done += 1;
     onProgress?.(done, files.length);
   }

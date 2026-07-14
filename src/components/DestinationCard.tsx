@@ -15,6 +15,8 @@ export function DestinationCard({
   coverUrl,
 }: DestinationCardProps) {
   const countLabel = photoCount === 1 ? '1 photo' : `${photoCount} photos`;
+  const imageSrc =
+    coverUrl || destination.cover_signed_url || PLACEHOLDER_COVER;
 
   return (
     <Link
@@ -23,10 +25,7 @@ export function DestinationCard({
       aria-label={`Open ${destination.name} journal`}
     >
       <div className={styles.cover}>
-        <img
-          src={coverUrl || PLACEHOLDER_COVER}
-          alt={`${destination.name} cover`}
-        />
+        <img src={imageSrc} alt={`${destination.name} cover`} />
       </div>
       <div className={styles.body}>
         <div className={styles.titleRow}>
