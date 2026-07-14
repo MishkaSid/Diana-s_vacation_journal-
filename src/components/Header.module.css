@@ -8,7 +8,7 @@
 .logout {
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
-  background: rgba(255, 251, 255, 0.92);
-  border: 1px solid rgba(232, 145, 168, 0.2);
+  background: rgba(255, 252, 249, 0.92);
+  border: 1px solid rgba(70, 58, 53, 0.12);
   color: var(--ink-muted);
 }

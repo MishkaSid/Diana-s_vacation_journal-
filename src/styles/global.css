@@ -1,21 +1,21 @@
 :root {
-  --cream: #fff7f9;
-  --cream-deep: #fceef3;
-  --beige: #f3dfe6;
-  --beige-soft: #fff4f7;
-  --terracotta: #e891a8;
-  --terracotta-deep: #d97893;
-  --terracotta-soft: #f2b4c3;
-  --olive: #c48aa5;
-  --olive-soft: #d9a8bc;
-  --ink: #5a3f4a;
-  --ink-muted: #8a6a76;
-  --ink-faint: #b99aaa;
-  --white: #fffbff;
-  --blush: #ffd6e2;
-  --lilac: #e9d5f2;
-  --shadow: 0 12px 32px rgba(196, 128, 150, 0.12);
-  --shadow-strong: 0 20px 44px rgba(184, 110, 140, 0.16);
+  --cream: #faf4ef;
+  --cream-deep: #f2e8e0;
+  --beige: #e8d8cc;
+  --beige-soft: #f7efe8;
+  --terracotta: #d4846a;
+  --terracotta-deep: #c06d54;
+  --terracotta-soft: #e4a08a;
+  --olive: #8a9074;
+  --olive-soft: #a3a88f;
+  --ink: #463a35;
+  --ink-muted: #75665e;
+  --ink-faint: #a3948b;
+  --white: #fffcf9;
+  --blush: #f3d5cb;
+  --lilac: #e8ddd6;
+  --shadow: 0 12px 32px rgba(70, 58, 53, 0.08);
+  --shadow-strong: 0 20px 44px rgba(70, 58, 53, 0.13);
   --radius: 20px;
   --radius-sm: 14px;
   --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
@@ -40,10 +40,10 @@ body {
   font-family: var(--font-sans);
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(255, 182, 206, 0.28), transparent 32%),
-    radial-gradient(circle at top right, rgba(224, 190, 245, 0.24), transparent 34%),
-    radial-gradient(circle at bottom center, rgba(255, 214, 226, 0.2), transparent 40%),
-    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 55%, #f6e8f3 100%);
+    radial-gradient(circle at top left, rgba(212, 132, 106, 0.12), transparent 32%),
+    radial-gradient(circle at top right, rgba(138, 144, 116, 0.1), transparent 34%),
+    radial-gradient(circle at bottom center, rgba(243, 213, 203, 0.22), transparent 42%),
+    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 60%, #ebe0d6 100%);
   background-attachment: fixed;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -189,24 +189,24 @@ img {
 }
 
 .btnPrimary {
-  background: linear-gradient(135deg, #f0a0b4 0%, #e891a8 55%, #d97893 100%);
+  background: linear-gradient(135deg, #e19980 0%, var(--terracotta) 55%, var(--terracotta-deep) 100%);
   color: var(--white);
-  box-shadow: 0 10px 22px rgba(232, 145, 168, 0.35);
+  box-shadow: 0 10px 22px rgba(212, 132, 106, 0.28);
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #eba3b8 0%, #d97893 100%);
+  background: linear-gradient(135deg, #d98c72 0%, var(--terracotta-deep) 100%);
 }
 
 .btnSecondary {
-  background: rgba(255, 251, 255, 0.88);
+  background: rgba(255, 252, 249, 0.88);
   color: var(--ink);
-  border: 1px solid rgba(232, 145, 168, 0.22);
+  border: 1px solid rgba(70, 58, 53, 0.12);
 }
 
 .btnSecondary:hover:not(:disabled) {
-  border-color: var(--terracotta-soft);
-  background: #fff8fb;
+  border-color: var(--olive-soft);
+  background: var(--white);
 }
 
 .btnGhost {
@@ -217,16 +217,16 @@ img {
 
 .btnGhost:hover:not(:disabled) {
   color: var(--ink);
-  background: rgba(255, 240, 246, 0.7);
+  background: rgba(255, 248, 244, 0.75);
 }
 
 .btnDanger {
-  background: #d9778f;
+  background: #b85a52;
   color: white;
 }
 
 .btnDanger:hover:not(:disabled) {
-  background: #c45f79;
+  background: #9f4a43;
 }
 
 .btnIcon {
@@ -234,8 +234,8 @@ img {
   height: 2.5rem;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(232, 145, 168, 0.2);
-  background: rgba(255, 251, 255, 0.9);
+  border: 1px solid rgba(70, 58, 53, 0.12);
+  background: rgba(255, 252, 249, 0.9);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -257,8 +257,8 @@ img {
 .field textarea,
 .field select {
   width: 100%;
-  border: 1px solid rgba(232, 145, 168, 0.28);
-  background: rgba(255, 251, 255, 0.92);
+  border: 1px solid rgba(70, 58, 53, 0.14);
+  background: rgba(255, 252, 249, 0.92);
   border-radius: 14px;
   padding: 0.75rem 0.9rem;
   transition:
@@ -271,7 +271,7 @@ img {
 .field select:focus {
   outline: none;
   border-color: var(--terracotta-soft);
-  box-shadow: 0 0 0 3px rgba(232, 145, 168, 0.18);
+  box-shadow: 0 0 0 3px rgba(212, 132, 106, 0.16);
 }
 
 .field textarea {
@@ -296,8 +296,8 @@ img {
 }
 
 .cardSurface {
-  background: rgba(255, 251, 255, 0.82);
-  border: 1px solid rgba(232, 145, 168, 0.16);
+  background: rgba(255, 252, 249, 0.82);
+  border: 1px solid rgba(70, 58, 53, 0.08);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
@@ -315,7 +315,7 @@ img {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 3px solid rgba(232, 145, 168, 0.22);
+  border: 3px solid rgba(212, 132, 106, 0.2);
   border-top-color: var(--terracotta);
   animation: spin 0.8s linear infinite;
   margin: 0 auto 1rem;
@@ -327,8 +327,8 @@ img {
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: rgba(232, 145, 168, 0.16);
-  color: #b86a84;
+  background: rgba(138, 144, 116, 0.14);
+  color: var(--olive);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -339,7 +339,7 @@ img {
   gap: 0.55rem;
   padding: 0.75rem 0.95rem;
   border-radius: 14px;
-  background: rgba(255, 214, 226, 0.45);
-  color: #a8667d;
+  background: rgba(138, 144, 116, 0.12);
+  color: var(--olive);
   font-size: 0.92rem;
 }
